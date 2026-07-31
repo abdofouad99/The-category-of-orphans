@@ -946,10 +946,10 @@ export function OrphansClient({
                     <TableCell className="font-bold text-[#1C355E] dark:text-white">{orphan.fullName}</TableCell>
                     <TableCell className="text-[#1C355E]/80 dark:text-slate-300 font-medium">
                       <a
-                        href={`/dashboard/families?search=${encodeURIComponent(orphan.family.headFullName)}`}
+                        href={`/dashboard/families?search=${encodeURIComponent(orphan.family?.headFullName || '')}`}
                         className="hover:text-[#00B2A9] dark:hover:text-emerald-400 hover:underline transition-colors duration-200"
                       >
-                        {orphan.family.headFullName}
+                        {orphan.family?.headFullName || orphan.fatherFullName || "غير محدد"}
                       </a>
                     </TableCell>
                     <TableCell>
