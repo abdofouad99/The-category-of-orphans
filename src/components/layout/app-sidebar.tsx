@@ -20,6 +20,13 @@ import {
   Bell,
   Stethoscope,
   BookOpen,
+  CheckSquare,
+  Clock,
+  Building2,
+  Megaphone,
+  HandHeart,
+  Activity,
+  Shield,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -299,7 +306,48 @@ export function AppSidebar({ className }: AppSidebarProps) {
           })}
         </div>
 
-        {/* SECTION 4: النظام والتنبيهات */}
+        {/* SECTION 4: العمليات والموارد البشرية (المنظومة الموحدة) */}
+        <div className="mb-5 space-y-1">
+          <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-teal-300/70">
+            العمليات والموارد البشرية
+          </p>
+          {[
+            { href: "/dashboard/tasks", label: "إدارة وتوزيع المهام", icon: CheckSquare, exact: false, color: "text-amber-400" },
+            { href: "/dashboard/tasks/board", label: "لوحة كانبان المهام", icon: ArrowLeftRight, exact: false, color: "text-indigo-400" },
+            { href: "/dashboard/time-tracking", label: "تتبع ساعات العمل والدوام", icon: Clock, exact: false, color: "text-teal-400" },
+            { href: "/dashboard/requests", label: "إدارة ومتابعة الطلبات", icon: FileText, exact: false, color: "text-blue-400" },
+            { href: "/dashboard/volunteers", label: "إدارة المتطوعين وبنك الساعات", icon: HandHeart, exact: false, color: "text-rose-400" },
+            { href: "/dashboard/announcements", label: "نشر التعميمات الإدارية", icon: Megaphone, exact: false, color: "text-emerald-400" },
+            { href: "/dashboard/docs", label: "المستودع واللوائح والسياسات", icon: BookOpen, exact: false, color: "text-purple-400" },
+            { href: "/dashboard/departments", label: "الهيكل الإداري والأقسام", icon: Building2, exact: false, color: "text-cyan-400" },
+            { href: "/dashboard/activity-log", label: "سجل التدقيق الرقابي", icon: Activity, exact: false, color: "text-slate-300" },
+          ].map((item) => {
+            const Icon = item.icon
+            const active = isActive(item.href, item.exact)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-200",
+                  active
+                    ? "bg-white/15 text-[#00D4CA] shadow-sm border-r-2 border-[#00B2A9]"
+                    : "text-white/70 hover:bg-white/8 hover:text-white"
+                )}
+              >
+                <Icon
+                  className={cn(
+                    "h-4 w-4 flex-shrink-0 transition-transform duration-200 group-hover:scale-110",
+                    active ? "text-[#00D4CA]" : "text-white/60 group-hover:text-white"
+                  )}
+                />
+                <span className="flex-1 truncate">{item.label}</span>
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* SECTION 5: النظام والتنبيهات */}
         <div className="space-y-1">
           <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-teal-300/70">
             أدوات النظام
