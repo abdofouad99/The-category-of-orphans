@@ -1,5 +1,7 @@
 "use server"
 
+import fs from "fs"
+import path from "path"
 import { prisma } from "@/lib/prisma"
 import { createSupabaseAdminClient } from "@/lib/supabase"
 import { revalidatePath } from "next/cache"
@@ -104,6 +106,14 @@ export async function getOrphanAttachments(orphanId: string) {
 
 export async function getSignedDownloadUrl(storagePath: string) {
   try {
+    const cleanPath = storagePath.startsWith("/") ? storagePath.slice(1) : storagePath
+    const localRel = cleanPath.startsWith("uploads/") ? cleanPath.slice("uploads/".length) : cleanPath
+    const localFullPath = path.join(process.cwd(), "public", "uploads", localRel)
+
+    if (fs.existsSync(localFullPath)) {
+      return { success: true, url: `/uploads/${localRel}` }
+    }
+
     const supabase = createSupabaseAdminClient()
     const { data, error } = await supabase.storage
       .from(BUCKET)
