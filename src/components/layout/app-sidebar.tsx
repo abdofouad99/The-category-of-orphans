@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -11,6 +12,7 @@ import {
   FileText,
   Settings,
   ChevronLeft,
+  ChevronDown,
   Trash2,
   ArrowLeftRight,
   FileSpreadsheet,
@@ -29,12 +31,13 @@ import {
   Kanban,
   Sliders,
   Sparkles,
+  ChevronsUpDown,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 // =============================================================================
-// Reorganized Navigation Groups
+// Navigation Types & Configuration
 // =============================================================================
 
 interface NavItem {
@@ -47,28 +50,18 @@ interface NavItem {
 }
 
 interface NavSection {
+  id: string
   title: string
-  icon?: string
+  iconEmoji: string
   items: NavItem[]
 }
 
 const navSections: NavSection[] = [
-  // 1. الرئيسية
+  // 1. العمليات الميدانية والبرامج
   {
-    title: "الرئيسية",
-    items: [
-      {
-        href: "/dashboard",
-        label: "الرئيسية والداشبورد",
-        icon: Home,
-        exact: true,
-        color: "text-emerald-400",
-      },
-    ],
-  },
-  // 2. إدارة البرامج والعمليات
-  {
-    title: "⚙️ العمليات الميدانية والبرامج",
+    id: "operations",
+    title: "العمليات والبرامج",
+    iconEmoji: "⚙️",
     items: [
       {
         href: "/dashboard/families",
@@ -135,9 +128,11 @@ const navSections: NavSection[] = [
       },
     ],
   },
-  // 3. الموارد البشرية والإدارة الداخلية
+  // 2. الموارد البشرية والإدارة الداخلية
   {
-    title: "👥 الموارد البشرية والإدارة الداخلية",
+    id: "hr",
+    title: "الموارد البشرية والإدارة",
+    iconEmoji: "👥",
     items: [
       {
         href: "/dashboard/tasks",
@@ -190,9 +185,11 @@ const navSections: NavSection[] = [
       },
     ],
   },
-  // 4. التحليلات والتقارير
+  // 3. التحليلات والتقارير الذكية
   {
-    title: "📊 التحليلات والتقارير الذكية",
+    id: "analytics",
+    title: "التحليلات والتقارير",
+    iconEmoji: "📊",
     items: [
       {
         href: "/dashboard/kanban",
@@ -225,9 +222,11 @@ const navSections: NavSection[] = [
       },
     ],
   },
-  // 5. أدوات النظام
+  // 4. أدوات وأمان النظام
   {
-    title: "🔐 أدوات وأمان النظام",
+    id: "system",
+    title: "أدوات وأمان النظام",
+    iconEmoji: "🔐",
     items: [
       {
         href: "/dashboard/alerts",
@@ -284,6 +283,30 @@ export function AppSidebar({ className }: AppSidebarProps) {
     return pathname === href || pathname.startsWith(href + "/")
   }
 
+  // Section collapse state (default: open operations by default)
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    operations: true,
+    hr: false,
+    analytics: false,
+    system: false,
+  })
+
+  // Automatically ensure the section containing the active route is open
+  useEffect(() => {
+    navSections.forEach((sec) => {
+      const containsActive = sec.items.some((item) => isActive(item.href, item.exact))
+      if (containsActive) {
+        setOpenSections((prev) => ({ ...prev, [sec.id]: true }))
+      }
+    })
+  }, [pathname])
+
+  const toggleSection = (id: string) => {
+    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const isHomeActive = pathname === "/dashboard"
+
   return (
     <aside
       className={cn(
@@ -309,48 +332,123 @@ export function AppSidebar({ className }: AppSidebarProps) {
       </div>
 
       {/* ── Navigation ────────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/20">
-        {navSections.map((section, idx) => (
-          <div key={idx} className="space-y-1">
-            <div className="flex items-center justify-between px-2 mb-1.5">
-              <p className="text-[10.5px] font-bold uppercase tracking-wider text-teal-300/80 flex items-center gap-1.5">
-                {section.title}
-              </p>
-              <div className="h-[1px] flex-1 bg-white/10 ml-2 mr-1" />
-            </div>
+      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/20">
+        
+        {/* 1. الزر الرئيسي للداشبورد (ثابت ومميز في الأعلى) */}
+        <Link
+          href="/dashboard"
+          className={cn(
+            "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-200 shadow-sm",
+            isHomeActive
+              ? "bg-[#00B2A9] text-white shadow-[#00B2A9]/30"
+              : "text-white/80 hover:bg-white/10 hover:text-white bg-white/5 border border-white/5"
+          )}
+        >
+          <Home
+            className={cn(
+              "h-4 w-4 flex-shrink-0 transition-transform duration-200 group-hover:scale-110",
+              isHomeActive ? "text-white" : "text-emerald-400"
+            )}
+          />
+          <span className="flex-1 truncate">الرئيسية والداشبورد</span>
+          <span className="text-[10px] bg-black/20 text-white/90 px-1.5 py-0.5 rounded font-mono">
+            Ctrl+H
+          </span>
+        </Link>
 
-            {section.items.map((item) => {
-              const Icon = item.icon
-              const active = isActive(item.href, item.exact)
+        <div className="h-[1px] bg-white/10 my-2" />
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-200",
-                    active
-                      ? "bg-white/15 text-[#00D4CA] shadow-sm border-r-2 border-[#00B2A9]"
-                      : "text-white/70 hover:bg-white/10 hover:text-white"
+        {/* 2. الأقسام القابلة للطي والتوسيع مع الأسهم */}
+        {navSections.map((section) => {
+          const isOpen = !!openSections[section.id]
+          const hasActiveItem = section.items.some((item) => isActive(item.href, item.exact))
+
+          return (
+            <div
+              key={section.id}
+              className={cn(
+                "rounded-xl border transition-all duration-200 overflow-hidden",
+                hasActiveItem
+                  ? "border-teal-500/30 bg-white/[0.04]"
+                  : "border-white/5 bg-transparent"
+              )}
+            >
+              {/* عنوان القسم القابل للنقر مع السهم */}
+              <button
+                type="button"
+                onClick={() => toggleSection(section.id)}
+                className={cn(
+                  "w-full flex items-center justify-between px-3 py-2.5 text-xs font-bold transition-all duration-150 group text-right",
+                  hasActiveItem ? "text-teal-300" : "text-white/80 hover:text-white",
+                  "hover:bg-white/8"
+                )}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm">{section.iconEmoji}</span>
+                  <span className="truncate">{section.title}</span>
+                  {hasActiveItem && !isOpen && (
+                    <span className="inline-block h-2 w-2 rounded-full bg-[#00D4CA] ring-2 ring-[#00D4CA]/30 animate-pulse" />
                   )}
-                >
-                  <Icon
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span
                     className={cn(
-                      "h-4 w-4 flex-shrink-0 transition-transform duration-200 group-hover:scale-110",
-                      active ? "text-[#00D4CA]" : item.color || "text-slate-400"
+                      "text-[10px] font-mono px-1.5 py-0.5 rounded-full transition-colors",
+                      hasActiveItem
+                        ? "bg-teal-500/20 text-teal-300"
+                        : "bg-white/10 text-white/50 group-hover:text-white/80"
+                    )}
+                  >
+                    {section.items.length}
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 text-white/50 transition-transform duration-200 group-hover:text-white",
+                      isOpen ? "rotate-180 text-teal-300" : ""
                     )}
                   />
-                  <span className="flex-1 truncate">{item.label}</span>
-                  {item.badge && (
-                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] px-1.5 py-0.5 rounded-full font-bold">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              )
-            })}
-          </div>
-        ))}
+                </div>
+              </button>
+
+              {/* عناصر القسم (تظهر عند الفتح) */}
+              {isOpen && (
+                <div className="space-y-0.5 px-2 pb-2 pt-1 border-t border-white/5">
+                  {section.items.map((item) => {
+                    const Icon = item.icon
+                    const active = isActive(item.href, item.exact)
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                          "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150",
+                          active
+                            ? "bg-white/15 text-[#00D4CA] font-bold shadow-sm border-r-2 border-[#00B2A9]"
+                            : "text-white/70 hover:bg-white/8 hover:text-white"
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            "h-3.5 w-3.5 flex-shrink-0 transition-transform duration-150 group-hover:scale-110",
+                            active ? "text-[#00D4CA]" : item.color || "text-slate-400"
+                          )}
+                        />
+                        <span className="flex-1 truncate text-[11.5px]">{item.label}</span>
+                        {item.badge && (
+                          <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] px-1 py-0.2 rounded font-bold">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </nav>
 
       {/* ── User Footer ───────────────────────────────────────────── */}
