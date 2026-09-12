@@ -8,7 +8,7 @@ import { translateDocumentType } from "@/lib/attachment-utils"
 // re-export for convenience
 export { translateDocumentType }
 
-const BUCKET = "orphan-attachments"
+const BUCKET = "attachments"
 
 
 // UPLOAD ATTACHMENT

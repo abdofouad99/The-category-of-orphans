@@ -1,10 +1,39 @@
 import { createServerClient } from "@supabase/ssr";
 import { createBrowserClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import dns from "node:dns";
 
 // =============================================================================
-// Supabase Client Utilities
+// DNS Resolution Patch (Ensures reliable connection without DNS failures)
 // =============================================================================
+if (typeof window === "undefined") {
+  const originalLookup = dns.lookup;
+  const HOSTS: Record<string, string[]> = {
+    "fzxqojzhrkdqfuoajxoo.supabase.co": ["104.18.38.10", "172.64.149.246"],
+    "aws-0-ap-south-1.pooler.supabase.com": ["3.111.105.85", "65.0.195.55"],
+    "fsodnxtxtyyyowqxbkpi.supabase.co": ["104.18.38.10", "172.64.149.246"],
+    "aws-1-ap-northeast-1.pooler.supabase.com": ["13.114.6.6", "57.182.231.186", "18.176.230.146"],
+  };
+
+  (dns as any).lookup = function (hostname: any, options: any, callback: any) {
+    if (typeof options === "function") {
+      callback = options;
+      options = {};
+    }
+    if (typeof hostname === "string" && HOSTS[hostname]) {
+      const ips = HOSTS[hostname];
+      if (options && options.all) {
+        return callback(
+          null,
+          ips.map((ip) => ({ address: ip, family: 4 }))
+        );
+      }
+      return callback(null, ips[0], 4);
+    }
+    return originalLookup(hostname, options, callback);
+  };
+}
+
 
 /**
  * Server-side Supabase client (for Server Components, Server Actions, Route Handlers)

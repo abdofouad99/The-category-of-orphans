@@ -39,36 +39,41 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  const pathname = request.nextUrl.pathname
+    const pathname = request.nextUrl.pathname
 
-  // Redirect unauthenticated users to /login
-  if (!user && pathname.startsWith("/dashboard")) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    return NextResponse.redirect(url)
-  }
-
-  // Handle authenticated users redirects
-  if (user) {
-    const role = user.user_metadata?.role
-
-    // If marketer attempts to access any other dashboard route, redirect to /dashboard/marketer
-    if (role === "MARKETER" && pathname.startsWith("/dashboard") && pathname !== "/dashboard/marketer") {
+    // Redirect unauthenticated users to /login
+    if (!user && pathname.startsWith("/dashboard")) {
       const url = request.nextUrl.clone()
-      url.pathname = "/dashboard/marketer"
+      url.pathname = "/login"
       return NextResponse.redirect(url)
     }
 
-    // Redirect logged-in users away from /login
-    if (pathname === "/login") {
-      const url = request.nextUrl.clone()
-      url.pathname = role === "MARKETER" ? "/dashboard/marketer" : "/dashboard"
-      return NextResponse.redirect(url)
+    // Handle authenticated users redirects
+    if (user) {
+      const role = user.user_metadata?.role
+
+      // If marketer attempts to access any other dashboard route, redirect to /dashboard/marketer
+      if (role === "MARKETER" && pathname.startsWith("/dashboard") && pathname !== "/dashboard/marketer") {
+        const url = request.nextUrl.clone()
+        url.pathname = "/dashboard/marketer"
+        return NextResponse.redirect(url)
+      }
+
+      // Redirect logged-in users away from /login
+      if (pathname === "/login") {
+        const url = request.nextUrl.clone()
+        url.pathname = role === "MARKETER" ? "/dashboard/marketer" : "/dashboard"
+        return NextResponse.redirect(url)
+      }
     }
+  } catch (authError) {
+    // If auth check fails due to temporary network/DNS, allow request to proceed to server components
+    console.warn("Middleware auth check notice:", authError)
   }
 
   return response

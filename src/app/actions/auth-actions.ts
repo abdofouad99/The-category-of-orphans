@@ -13,6 +13,9 @@ export async function loginAction(email: string, password: string) {
     })
 
     if (error) {
+      if (error.message.includes("Invalid login credentials")) {
+        return { success: false, error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" }
+      }
       return { success: false, error: error.message }
     }
 
