@@ -237,12 +237,7 @@ export async function uploadFamilyAttachment(formData: FormData) {
 export async function getFamilyAttachments(familyId: string) {
   try {
     const attachments = await prisma.attachment.findMany({
-      where: {
-        OR: [
-          { familyId: familyId },
-          { beneficiary: { familyId: familyId } }
-        ]
-      },
+      where: { familyId: familyId },
       orderBy: { createdAt: "asc" },
     })
     return { success: true, attachments }
