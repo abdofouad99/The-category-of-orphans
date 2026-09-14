@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   CheckSquare,
   Clock,
@@ -12,10 +13,13 @@ import {
   User,
   Calendar,
   AlertCircle,
+  Trash2,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CreateTaskDialog } from "@/components/tasks/create-task-dialog"
+import { updateTaskStatusAction, deleteTaskAction } from "@/app/actions/task-actions"
+import { TaskStatus } from "@prisma/client"
 
 interface TaskItem {
   id: string
@@ -65,6 +69,7 @@ export function TasksClient({
   departments,
   users,
 }: TasksClientProps) {
+  const router = useRouter()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedDept, setSelectedDept] = useState<string>("ALL")
 
@@ -216,6 +221,7 @@ export function TasksClient({
                     <th className="py-3 px-4 font-bold">الأولوية</th>
                     <th className="py-3 px-4 font-bold">الحالة</th>
                     <th className="py-3 px-4 font-bold">تاريخ الإسناد</th>
+                    <th className="py-3 px-4 font-bold text-center">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/20">
@@ -239,12 +245,38 @@ export function TasksClient({
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusInfo.color}`}>
-                            {statusInfo.label}
-                          </span>
+                          <select
+                            value={task.status}
+                            onChange={async (e) => {
+                              await updateTaskStatusAction(task.id, e.target.value as TaskStatus)
+                              router.refresh()
+                            }}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold border ${statusInfo.color} bg-background cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary`}
+                          >
+                            <option value="NEW">جديدة</option>
+                            <option value="IN_PROGRESS">قيد التنفيذ</option>
+                            <option value="PENDING_DEPT_HEAD_REVIEW">مراجعة رئيس القسم</option>
+                            <option value="PENDING_GM_APPROVAL">موافقة المدير العام</option>
+                            <option value="COMPLETED">مكتملة</option>
+                            <option value="REJECTED">مرفوضة</option>
+                          </select>
                         </td>
                         <td className="py-3 px-4 text-muted-foreground font-mono">
                           {new Date(task.createdAt).toLocaleDateString("ar-SA")}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            onClick={async () => {
+                              if (confirm("هل أنت متأكد من رغبتك بحذف هذه المهمة؟")) {
+                                await deleteTaskAction(task.id)
+                                router.refresh()
+                              }
+                            }}
+                            title="حذف المهمة"
+                            className="p-1 rounded-md text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </td>
                       </tr>
                     )
