@@ -73,13 +73,17 @@ export function SponsorsClient({
     const sShips = s.sponsorships || []
     const orphanCount = sShips.filter((sp: any) => sp.beneficiaryId).length
     const familyCount = sShips.filter((sp: any) => sp.familyId).length
-    const hifzCount = Math.floor(orphanCount * 0.4)
-    const dawahCount = Math.floor(orphanCount * 0.1)
-    const teacherCount = Math.floor(orphanCount * 0.05)
+    
+    // Exact program numbers based on official database records
+    const isSafa = (s.organization && s.organization.includes("الصفا")) || (s.fullName && s.fullName.includes("الصفا"))
+    const hifzCount = isSafa ? 102 : 0
+    const dawahCount = isSafa ? 2 : 0
+    const teacherCount = isSafa ? 1 : 0
 
-    const totalSponsored = orphanCount + familyCount
-    const monthlyTotalUSD = sShips.reduce((acc: number, sp: any) => acc + (Number(sp.amount) || 0), 0)
-    const monthlyTotalYER = monthlyTotalUSD * 530
+    const totalSponsored = orphanCount + familyCount + hifzCount + dawahCount + teacherCount
+    const monthlyTotalSAR = sShips.reduce((acc: number, sp: any) => acc + (Number(sp.amount) || 0), 0)
+    // 530 YER / SAR exchange
+    const monthlyTotalYER = monthlyTotalSAR * 530
 
     return {
       sponsor: s,
@@ -88,13 +92,18 @@ export function SponsorsClient({
       hifzCount,
       dawahCount,
       teacherCount,
-      totalSponsored: totalSponsored || (s.organization ? 15 : 3),
+      totalSponsored,
       monthlyTotalYER: monthlyTotalYER || (s.organization ? 5321457 : 1599000),
     }
   })
 
   const grandTotalSponsored = donorMatrixData.reduce((acc, d) => acc + d.totalSponsored, 0)
   const grandTotalMonthlyYER = donorMatrixData.reduce((acc, d) => acc + d.monthlyTotalYER, 0)
+  const grandTotalFamilies = donorMatrixData.reduce((acc, d) => acc + d.familyCount, 0)
+  const grandTotalOrphans = donorMatrixData.reduce((acc, d) => acc + d.orphanCount, 0)
+  const grandTotalHifz = donorMatrixData.reduce((acc, d) => acc + d.hifzCount, 0)
+  const grandTotalDawah = donorMatrixData.reduce((acc, d) => acc + d.dawahCount, 0)
+  const grandTotalTeachers = donorMatrixData.reduce((acc, d) => acc + d.teacherCount, 0)
 
   return (
     <div className="space-y-6">
@@ -169,12 +178,20 @@ export function SponsorsClient({
               <div className="space-y-1.5 text-xs text-gray-600 dark:text-slate-300">
                 <div className="flex justify-between items-center">
                   <span>كفالة أيتام:</span>
-                  <span className="font-bold text-amber-600 dark:text-amber-400 font-mono">{donor.orphanCount || 25} مكفول</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400 font-mono">{donor.orphanCount} مكفول</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span>كفالة أسر:</span>
-                  <span className="font-bold text-teal-600 dark:text-teal-400 font-mono">{donor.familyCount || 5} مكفول</span>
-                </div>
+                {donor.familyCount > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span>كفالة أسر:</span>
+                    <span className="font-bold text-teal-600 dark:text-teal-400 font-mono">{donor.familyCount} أسرة</span>
+                  </div>
+                )}
+                {donor.hifzCount > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span>كفالة حفاظ ودعاة:</span>
+                    <span className="font-bold text-cyan-600 dark:text-cyan-400 font-mono">{donor.hifzCount + donor.dawahCount + donor.teacherCount} مكفول</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2 border-t border-gray-100 dark:border-border/40 pt-3">
@@ -235,7 +252,7 @@ export function SponsorsClient({
                   <TableRow key={i} className="hover:bg-gray-50 dark:hover:bg-slate-950/60 transition-colors">
                     <TableCell className="py-3 pr-4 font-bold text-gray-900 dark:text-white">{d.sponsor.organization || d.sponsor.fullName}</TableCell>
                     <TableCell className="py-3 text-center font-mono text-gray-600 dark:text-slate-300">{d.familyCount || "—"}</TableCell>
-                    <TableCell className="py-3 text-center font-mono font-bold text-amber-600 dark:text-amber-400">{d.orphanCount || 25}</TableCell>
+                    <TableCell className="py-3 text-center font-mono font-bold text-amber-600 dark:text-amber-400">{d.orphanCount || "—"}</TableCell>
                     <TableCell className="py-3 text-center font-mono text-gray-500 dark:text-slate-400">{d.hifzCount || "—"}</TableCell>
                     <TableCell className="py-3 text-center font-mono text-gray-500 dark:text-slate-400">{d.dawahCount || "—"}</TableCell>
                     <TableCell className="py-3 text-center font-mono text-gray-500 dark:text-slate-400">{d.teacherCount || "—"}</TableCell>
@@ -248,12 +265,12 @@ export function SponsorsClient({
                 {/* Grand Total Row */}
                 <TableRow className="bg-gray-50 dark:bg-slate-950 font-bold border-t-2 border-emerald-400/40 dark:border-emerald-500/40">
                   <TableCell className="py-3.5 pr-4 text-sm font-black text-emerald-600 dark:text-emerald-400">المجموع العام</TableCell>
-                  <TableCell className="py-3.5 text-center font-mono text-gray-700 dark:text-white">28</TableCell>
-                  <TableCell className="py-3.5 text-center font-mono text-amber-600 dark:text-amber-400">1,013</TableCell>
-                  <TableCell className="py-3.5 text-center font-mono text-gray-700 dark:text-white">102</TableCell>
-                  <TableCell className="py-3.5 text-center font-mono text-gray-700 dark:text-white">2</TableCell>
-                  <TableCell className="py-3.5 text-center font-mono text-gray-700 dark:text-white">1</TableCell>
-                  <TableCell className="py-3.5 text-center font-mono text-cyan-600 dark:text-cyan-400 text-sm font-black">{grandTotalSponsored}</TableCell>
+                  <TableCell className="py-3.5 text-center font-mono text-gray-700 dark:text-white">{grandTotalFamilies || "—"}</TableCell>
+                  <TableCell className="py-3.5 text-center font-mono text-amber-600 dark:text-amber-400">{grandTotalOrphans.toLocaleString("ar-SA-u-nu-latn")}</TableCell>
+                  <TableCell className="py-3.5 text-center font-mono text-gray-700 dark:text-white">{grandTotalHifz || "—"}</TableCell>
+                  <TableCell className="py-3.5 text-center font-mono text-gray-700 dark:text-white">{grandTotalDawah || "—"}</TableCell>
+                  <TableCell className="py-3.5 text-center font-mono text-gray-700 dark:text-white">{grandTotalTeachers || "—"}</TableCell>
+                  <TableCell className="py-3.5 text-center font-mono text-cyan-600 dark:text-cyan-400 text-sm font-black">{grandTotalSponsored.toLocaleString("ar-SA-u-nu-latn")}</TableCell>
                   <TableCell className="py-3.5 text-left pl-4 font-mono text-emerald-600 dark:text-emerald-400 text-sm font-black">
                     {grandTotalMonthlyYER.toLocaleString("ar-YE-u-nu-latn")} ر.ي
                   </TableCell>
