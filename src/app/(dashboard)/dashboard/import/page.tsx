@@ -221,14 +221,14 @@ export default function ImportPage() {
   }
 
   return (
-    <div className="space-y-6 p-6 max-w-7xl mx-auto text-right" dir="rtl">
+    <div className="space-y-6 pb-12 text-right" dir="rtl">
       {/* Page Header */}
-      <div className="border-b border-slate-800 pb-5">
-        <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
+      <div className="border-b border-border/40 pb-5">
+        <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
           <FileSpreadsheet className="h-6 w-6 text-emerald-500" />
           استيراد البيانات مجمعاً (Excel / CSV Batch Ingestion)
         </h2>
-        <p className="text-xs text-slate-400 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           وفر وقت الإدخال اليدوي، ارفع السجلات بالكامل للأسر والأيتام، وعاينها وصححها مباشرة من لوحة التحكم.
         </p>
       </div>
@@ -242,13 +242,13 @@ export default function ImportPage() {
         dir="rtl"
         className="space-y-6"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/40 p-3 rounded-xl border border-slate-800/80 backdrop-blur-md">
-          <TabsList className="bg-slate-950 p-1 rounded-lg border border-slate-800/50">
-            <TabsTrigger value="families" className="rounded-md text-xs font-bold gap-1 px-4 py-1.5 data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card/60 p-3 rounded-xl border border-border/60 backdrop-blur-md">
+          <TabsList className="bg-muted/60 p-1 rounded-lg border border-border/40">
+            <TabsTrigger value="families" className="rounded-md text-xs font-bold gap-1 px-4 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
               <Users className="h-4 w-4" />
               استيراد ملف الأسر المستفيدة
             </TabsTrigger>
-            <TabsTrigger value="orphans" className="rounded-md text-xs font-bold gap-1 px-4 py-1.5 data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+            <TabsTrigger value="orphans" className="rounded-md text-xs font-bold gap-1 px-4 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
               <Baby className="h-4 w-4" />
               استيراد ملف الأيتام وشؤونهم
             </TabsTrigger>
@@ -256,9 +256,10 @@ export default function ImportPage() {
 
           <Button
             onClick={activeTab === "families" ? downloadFamilyTemplate : downloadOrphanTemplate}
-            className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold h-9 rounded-lg gap-1.5 border border-slate-700 hover:border-slate-600 transition-all hover:scale-[1.03] active:scale-[0.97]"
+            variant="outline"
+            className="text-foreground text-xs font-bold h-9 rounded-lg gap-1.5 border border-border/70 hover:bg-muted/50 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            <Download className="h-3.5 w-3.5" />
+            <Download className="h-3.5 w-3.5 text-emerald-500" />
             تحميل نموذج ملف الاستيراد الجاهز
           </Button>
         </div>
@@ -374,7 +375,7 @@ function ImportSection({
     <div className="space-y-6">
       {/* ── Dropzone & Upload Panel ── */}
       {!showPreview ? (
-        <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-700/60 rounded-3xl p-12 bg-slate-900/20 hover:bg-slate-900/40 transition-colors text-center relative overflow-hidden">
+        <div className="flex flex-col items-center justify-center border-2 border-dashed border-border/80 rounded-3xl p-12 bg-card/40 hover:bg-card/70 transition-colors text-center relative overflow-hidden">
           <input
             type="file"
             accept=".csv"
@@ -382,26 +383,26 @@ function ImportSection({
             className="absolute inset-0 opacity-0 cursor-pointer z-10"
           />
           <Upload className="h-10 w-10 text-emerald-500 mb-4 animate-bounce" />
-          <h3 className="text-sm font-extrabold text-white mb-1">
+          <h3 className="text-sm font-extrabold text-foreground mb-1">
             اسحب وأسقط ملف الـ CSV المخصص للاستيراد هنا
           </h3>
-          <p className="text-[11px] text-slate-400 max-w-sm mb-4 leading-relaxed">
+          <p className="text-[11px] text-muted-foreground max-w-sm mb-4 leading-relaxed">
             تأكد من اختيار وحفظ ملف إكسل بصيغة CSV (Comma Delimited) قبل الرفع لضمان سلاسة قراءة الملف بشكل سليم.
           </p>
-          <div className="bg-slate-850 px-3 py-1.5 rounded-lg border border-slate-700/50 text-[10px] text-slate-350 font-bold flex items-center gap-1">
-            <Info className="h-3.5 w-3.5" />
+          <div className="bg-muted/60 px-3 py-1.5 rounded-lg border border-border/60 text-[10px] text-muted-foreground font-bold flex items-center gap-1">
+            <Info className="h-3.5 w-3.5 text-emerald-500" />
             يدعم الاستيراد فحص التكرار تلقائياً لمنع إدخال بيانات مكررة.
           </div>
         </div>
       ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/40 border border-slate-800 p-4 rounded-2xl shadow-sm backdrop-blur-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card/60 border border-border/60 p-4 rounded-2xl shadow-sm backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-emerald-950/40 text-emerald-450 border border-emerald-900/50 rounded-xl flex items-center justify-center">
+            <div className="h-10 w-10 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl flex items-center justify-center">
               <FileSpreadsheet className="h-5 w-5" />
             </div>
             <div>
-              <h4 className="text-xs font-extrabold text-white">الملف الجاهز للاستيراد: {fileName}</h4>
-              <p className="text-[10px] text-slate-400 mt-0.5">تم العثور على ({parsedData.length}) سجل صالح للمعاينة والرفع.</p>
+              <h4 className="text-xs font-extrabold text-foreground">الملف الجاهز للاستيراد: {fileName}</h4>
+              <p className="text-[10px] text-muted-foreground mt-0.5">تم العثور على ({parsedData.length}) سجل صالح للمعاينة والرفع.</p>
             </div>
           </div>
 
@@ -409,14 +410,14 @@ function ImportSection({
             <Button
               onClick={onClear}
               variant="outline"
-              className="border-slate-800 text-slate-300 hover:text-white h-9 px-4 rounded-lg text-xs font-bold hover:bg-slate-850/60 transition-all"
+              className="border-border text-foreground hover:bg-muted/50 h-9 px-4 rounded-lg text-xs font-bold transition-all"
             >
               إلغاء الملف
             </Button>
             <Button
               onClick={onImport}
               disabled={loading}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white h-9 px-5 rounded-lg text-xs font-bold gap-1.5 shadow-md shadow-emerald-900/30 transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white h-9 px-5 rounded-lg text-xs font-bold gap-1.5 shadow-md shadow-emerald-900/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
             >
               {loading ? (
                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -431,43 +432,43 @@ function ImportSection({
 
       {/* ── Live Preview Table Grid ── */}
       {showPreview && (
-        <Card className="bg-slate-900/40 border border-slate-800/80 backdrop-blur-md rounded-2xl shadow-sm overflow-hidden">
-          <CardHeader className="py-4 border-b border-slate-800/60">
-            <CardTitle className="text-xs font-extrabold text-white">
+        <Card className="bg-card/60 border border-border/60 backdrop-blur-md rounded-2xl shadow-sm overflow-hidden">
+          <CardHeader className="py-4 border-b border-border/40">
+            <CardTitle className="text-xs font-extrabold text-foreground">
               معاينة حية وتفقد السجلات المستخرجة (أول 10 سجلات للمعاينة)
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto">
             <table className="w-full text-right text-xs">
-              <thead className="bg-slate-950 border-b border-slate-800">
-                <tr className="hover:bg-slate-950 border-0">
-                  <th className="p-3 text-slate-200 font-bold pr-4">رقم الصف</th>
-                  <th className="p-3 text-slate-200 font-bold">التحقق</th>
+              <thead className="bg-muted/50 border-b border-border/40">
+                <tr className="hover:bg-transparent border-0">
+                  <th className="p-3 text-muted-foreground font-bold pr-4">رقم الصف</th>
+                  <th className="p-3 text-muted-foreground font-bold">التحقق</th>
                   {activeTab === "families" ? (
                     <>
-                      <th className="p-3 text-slate-200 font-bold">الاسم الكامل لرب الأسرة</th>
-                      <th className="p-3 text-slate-200 font-bold">الرقم الوطني</th>
-                      <th className="p-3 text-slate-200 font-bold">الجنس</th>
-                      <th className="p-3 text-slate-200 font-bold">الحي/العزلة</th>
-                      <th className="p-3 text-slate-200 font-bold">مستوى الفقر</th>
+                      <th className="p-3 text-muted-foreground font-bold">الاسم الكامل لرب الأسرة</th>
+                      <th className="p-3 text-muted-foreground font-bold">الرقم الوطني</th>
+                      <th className="p-3 text-muted-foreground font-bold">الجنس</th>
+                      <th className="p-3 text-muted-foreground font-bold">الحي/العزلة</th>
+                      <th className="p-3 text-muted-foreground font-bold">مستوى الفقر</th>
                     </>
                   ) : (
                     <>
-                      <th className="p-3 text-slate-200 font-bold">الاسم الكامل لليتيم</th>
-                      <th className="p-3 text-slate-200 font-bold">تاريخ الميلاد</th>
-                      <th className="p-3 text-slate-200 font-bold">هوية رب الأسرة</th>
-                      <th className="p-3 text-slate-200 font-bold">نوع اليتيم</th>
-                      <th className="p-3 text-slate-200 font-bold">كود اليتيم</th>
+                      <th className="p-3 text-muted-foreground font-bold">الاسم الكامل لليتيم</th>
+                      <th className="p-3 text-muted-foreground font-bold">تاريخ الميلاد</th>
+                      <th className="p-3 text-muted-foreground font-bold">هوية رب الأسرة</th>
+                      <th className="p-3 text-muted-foreground font-bold">نوع اليتيم</th>
+                      <th className="p-3 text-muted-foreground font-bold">كود اليتيم</th>
                     </>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 bg-transparent text-slate-350">
+              <tbody className="divide-y divide-border/30 bg-transparent text-foreground">
                 {parsedData.slice(0, 10).map((row, idx) => {
                   const validation = getRowValidation(row)
                   return (
-                    <tr key={idx} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="p-3 pr-4 font-mono font-bold text-slate-450">{idx + 1}</td>
+                    <tr key={idx} className="hover:bg-muted/30 transition-colors">
+                      <td className="p-3 pr-4 font-mono font-bold text-muted-foreground">{idx + 1}</td>
                       <td className="p-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${validation.style}`}>
                           {validation.label}
@@ -475,19 +476,19 @@ function ImportSection({
                       </td>
                       {activeTab === "families" ? (
                         <>
-                          <td className="p-3 font-bold text-white">{row.headFullName || "-"}</td>
-                          <td className="p-3 font-mono font-bold text-slate-300">{row.headNationalId || "-"}</td>
-                          <td className="p-3 font-semibold text-slate-350">{row.headGender || "-"}</td>
-                          <td className="p-3 text-slate-400 font-medium">{row.subDistrictName || "-"}</td>
-                          <td className="p-3 font-bold text-slate-300">{row.povertyLevel || "-"}</td>
+                          <td className="p-3 font-bold text-foreground">{row.headFullName || "-"}</td>
+                          <td className="p-3 font-mono font-bold text-primary">{row.headNationalId || "-"}</td>
+                          <td className="p-3 font-semibold text-muted-foreground">{row.headGender || "-"}</td>
+                          <td className="p-3 text-muted-foreground font-medium">{row.subDistrictName || "-"}</td>
+                          <td className="p-3 font-bold text-foreground">{row.povertyLevel || "-"}</td>
                         </>
                       ) : (
                         <>
-                          <td className="p-3 font-bold text-white">{row.fullName || "-"}</td>
-                          <td className="p-3 font-mono font-semibold text-slate-350">{row.birthdate || "-"}</td>
-                          <td className="p-3 font-mono font-bold text-slate-300">{row.familyNationalId || "-"}</td>
-                          <td className="p-3 font-semibold text-slate-350">{row.orphanType || "-"}</td>
-                          <td className="p-3 font-mono text-slate-450">{row.orphanCode || "-"}</td>
+                          <td className="p-3 font-bold text-foreground">{row.fullName || "-"}</td>
+                          <td className="p-3 font-mono font-semibold text-muted-foreground">{row.birthdate || "-"}</td>
+                          <td className="p-3 font-mono font-bold text-primary">{row.familyNationalId || "-"}</td>
+                          <td className="p-3 font-semibold text-muted-foreground">{row.orphanType || "-"}</td>
+                          <td className="p-3 font-mono text-muted-foreground">{row.orphanCode || "-"}</td>
                         </>
                       )}
                     </tr>
