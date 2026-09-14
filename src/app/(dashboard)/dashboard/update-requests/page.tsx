@@ -38,9 +38,9 @@ export default async function UpdateRequestsPage() {
 
   return (
     <div className="space-y-6 text-right" dir="rtl">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-800 pb-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
-          <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
+          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
             <ClipboardEdit className="h-6 w-6 text-emerald-500" />
             طلبات تحديث البيانات
             {pendingCount > 0 && (
@@ -49,7 +49,7 @@ export default async function UpdateRequestsPage() {
               </span>
             )}
           </h2>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">
             مراجعة البيانات المُرسَلة من المعيلين والموافقة عليها أو رفضها
           </p>
         </div>

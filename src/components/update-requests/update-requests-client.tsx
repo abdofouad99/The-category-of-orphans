@@ -147,8 +147,8 @@ export function UpdateRequestsClient({ requests, reviewerId }: Props) {
             onClick={() => setFilter(f)}
             className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
               filter === f
-                ? "bg-emerald-600 text-white border-emerald-600"
-                : "bg-white/5 text-slate-400 border-white/10 hover:bg-white/10"
+                ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10"
             }`}
           >
             {f === "ALL" ? "الكل" : statusLabel[f].label}
@@ -161,9 +161,14 @@ export function UpdateRequestsClient({ requests, reviewerId }: Props) {
 
       {/* List */}
       {displayed.length === 0 && (
-        <div className="text-center py-16 text-slate-500 text-sm">
-          <Clock className="h-10 w-10 mx-auto mb-3 text-slate-700" />
-          لا توجد طلبات {filter !== "ALL" ? statusLabel[filter].label : ""}
+        <div className="text-center py-20 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/50 dark:bg-slate-900/30 rounded-3xl border border-slate-200 dark:border-slate-800">
+          <Clock className="h-12 w-12 mx-auto mb-3 text-slate-400 dark:text-slate-600" />
+          <p className="font-semibold text-base text-slate-700 dark:text-slate-300">
+            لا توجد طلبات {filter !== "ALL" ? statusLabel[filter].label : ""}
+          </p>
+          <p className="text-xs text-slate-400 mt-1">
+            عندما يقوم المعيلون بتعبئة روابط تحديث البيانات المرسلة إليهم، ستظهر طلباتهم هنا للمراجعة والمطابقة
+          </p>
         </div>
       )}
 
