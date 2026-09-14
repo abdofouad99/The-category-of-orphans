@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { prisma } from "@/lib/prisma"
-import { Folder, CheckCircle, Target, Percent } from "lucide-react"
+import { Folder, CheckCircle, Target, Percent, PackageOpen } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { ProjectsClient } from "./projects-client"
 import { ProjectFormSheet } from "@/components/projects/project-form-sheet"
@@ -74,6 +74,10 @@ export default async function ProjectsPage() {
     getActiveBeneficiaries(),
   ])
 
+  // Serialize Prisma Decimals and Dates for safe Client Component transfer
+  const serializedProjects = JSON.parse(JSON.stringify(projects))
+  const serializedDistributions = JSON.parse(JSON.stringify(distributions))
+
   // KPI Calculations
   const activeProjectsCount = projects.filter((p) => p.status === "ACTIVE" || p.status === "COMPLETED").length
   const totalTarget = projects.reduce((acc, p) => acc + (p.targetCount || 0), 0)
@@ -84,16 +88,19 @@ export default async function ProjectsPage() {
   return (
     <div className="space-y-6">
       {/* ── Page Header ─────────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-5 border-slate-200 dark:border-slate-800">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 md:text-2xl">إدارة المشاريع والتوزيعات</h2>
-          <p className="mt-1 text-sm text-gray-500 font-medium">
-            تخطيط المشاريع التنموية والإغاثية للمنظمة وتسجيل وتوثيق التوزيعات وتسليم الحصص للمستفيدين.
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white md:text-2xl flex items-center gap-2">
+            <PackageOpen className="h-6 w-6 text-amber-500" />
+            إدارة المشاريع والتوزيعات
+          </h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 font-medium">
+            تخطيط المشاريع التنموية والإغاثية للمنظمة وتسجيل وتوثيق التوزيعات وتسليم الحصص للمستفيدين
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <ProjectFormSheet />
-          <DistributionFormSheet projects={projects} beneficiaries={beneficiaries} />
+          <DistributionFormSheet projects={serializedProjects} beneficiaries={beneficiaries} />
         </div>
       </div>
 
@@ -182,8 +189,8 @@ export default async function ProjectsPage() {
 
       {/* ── Interactive Unified Client Component ────────────────── */}
       <ProjectsClient
-        initialProjects={projects}
-        initialDistributions={distributions}
+        initialProjects={serializedProjects}
+        initialDistributions={serializedDistributions}
         activeBeneficiaries={beneficiaries}
       />
     </div>
