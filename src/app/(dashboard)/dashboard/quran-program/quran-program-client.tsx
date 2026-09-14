@@ -114,7 +114,79 @@ interface ProgramData {
 export function QuranProgramClient({ initialData }: { initialData: ProgramData }) {
   const [activeTab, setActiveTab] = useState<"huffaz" | "muhaffiz" | "daiyah">("huffaz")
   const [searchQuery, setSearchQuery] = useState("")
+  const [isExporting, setIsExporting] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<any | null>(null)
+
+  // Real Excel Export
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true)
+      const XLSX = await import("xlsx")
+      
+      const huffazSheet = initialData.huffaz.map((h, i) => ({
+        "م": i + 1,
+        "اسم الحافظ": h.fullName,
+        "الجنس": h.gender === "FEMALE" ? "أنثى" : "ذكر",
+        "رقم المشروع": h.projectNo || "—",
+        "رقم المميز": h.mumaiyo || "—",
+        "رقم الحساب": h.saudiAccount || "—",
+        "المحافظة": h.governorate,
+        "المديرية": h.district,
+        "القرية / المنطقة": h.village || "—",
+        "مستوى الحفظ": h.quranMemorized || h.memorizationLevel || "—",
+        "مركز التحفيظ": h.quranCenter || "—",
+        "حلقة التحفيظ": h.quranCircle || "—",
+        "المرحلة الدراسية": h.educationalStage || "—",
+        "الصف": h.grade || "—",
+        "التقدير": h.gradeEvaluation || "—",
+        "رقم الهاتف": h.phoneNumber || "—",
+        "الكفيل": h.sponsor,
+      }))
+
+      const muhaffizSheet = initialData.muhaffiz.map((m, i) => ({
+        "م": i + 1,
+        "اسم المحفظ": m.fullName,
+        "الجنس": m.gender === "FEMALE" ? "أنثى" : "ذكر",
+        "المحافظة": m.governorate,
+        "المدينة": m.city,
+        "المؤهل الجامعي": m.universityQualification || m.educationalQualification || "—",
+        "مقدار الحفظ والقراءات": m.quranMemorization || "—",
+        "عدد الروايات المجاز بها": m.riwayatCount || "—",
+        "عدد الحلقات شهرياً": m.monthlyCirclesCount || "—",
+        "موقع عقد الحلقات": m.circleLocation || "—",
+        "الحالة الاجتماعية": m.socialStatus || "—",
+        "الكفيل": m.sponsor,
+      }))
+
+      const daiyahSheet = initialData.daiyah.map((d, i) => ({
+        "م": i + 1,
+        "اسم الداعية": d.fullName,
+        "المؤهل العلمي": d.qualification || "—",
+        "التخصص الدقيق": d.specialization || "—",
+        "الشهادات العلمية والشرعية": d.certificates || "—",
+        "مقدار الحفظ": d.quranMemorization || "—",
+        "المحافظة والمدينة": `${d.governorate} - ${d.city}`,
+        "الكفيل": d.sponsor,
+      }))
+
+      const wb = XLSX.utils.book_new()
+      
+      const ws1 = XLSX.utils.json_to_sheet(huffazSheet)
+      XLSX.utils.book_append_sheet(wb, ws1, "حفاظ القرآن الكريم")
+
+      const ws2 = XLSX.utils.json_to_sheet(muhaffizSheet)
+      XLSX.utils.book_append_sheet(wb, ws2, "المحفظون والمعلمون")
+
+      const ws3 = XLSX.utils.json_to_sheet(daiyahSheet)
+      XLSX.utils.book_append_sheet(wb, ws3, "الدعاة والعلماء")
+
+      XLSX.writeFile(wb, `كشف_برنامج_القرآن_والدعاة_الصفا_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    } catch (err) {
+      console.error("Export error:", err)
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   // Filtered Huffaz
   const filteredHuffaz = useMemo(() => {
@@ -177,11 +249,12 @@ export function QuranProgramClient({ initialData }: { initialData: ProgramData }
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            className="gap-2 text-[#1C355E] dark:text-slate-200 border-slate-300 dark:border-slate-700"
-            onClick={() => alert("جاري تصدير التقرير إلى Excel...")}
+            disabled={isExporting}
+            className="gap-2 text-[#1C355E] dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-[#00B2A9]/10"
+            onClick={handleExportExcel}
           >
             <FileSpreadsheet className="h-4 w-4 text-[#00B2A9]" />
-            تصدير كشف الصفا Excel
+            {isExporting ? "جاري التصدير..." : "تصدير كشف الصفا Excel"}
           </Button>
         </div>
       </div>
