@@ -114,59 +114,79 @@ export function PatientsClient({ initialPatients, geography, currentUserRole }: 
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-rose-950/60 to-rose-900/30 border border-rose-800/20">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-rose-600/5 dark:from-rose-950/40 dark:to-rose-900/20 shadow-sm">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-rose-300">إجمالي المرضى</p>
-                <p className="mt-1 text-2xl font-black text-rose-100 tabular-nums">{totalCount}</p>
+                <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">إجمالي المرضى</p>
+                <p className="mt-2 text-2xl font-bold text-[#1C355E] dark:text-white tabular-nums">
+                  {totalCount.toLocaleString("ar-SA-u-nu-latn")}
+                </p>
               </div>
-              <div className="rounded-xl bg-rose-500/10 p-2.5">
-                <Stethoscope className="h-5 w-5 text-rose-400" />
+              <div className="rounded-xl bg-rose-500/10 p-2.5 text-rose-600 dark:text-rose-400">
+                <Stethoscope className="h-5 w-5" />
               </div>
+            </div>
+            <div className="mt-2 text-xs text-rose-700/70 dark:text-rose-300/70 font-medium">
+              إجمالي الملفات الطبية المسجلة
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-red-950/60 to-red-900/30 border border-red-800/20">
+        <Card className="border border-red-500/20 bg-gradient-to-br from-red-500/10 to-red-600/5 dark:from-red-950/40 dark:to-red-900/20 shadow-sm">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-red-300">حالات حرجة وخطيرة</p>
-                <p className="mt-1 text-2xl font-black text-red-100 tabular-nums">{criticalCount}</p>
+                <p className="text-sm font-semibold text-red-600 dark:text-red-400">حالات حرجة وخطيرة</p>
+                <p className="mt-2 text-2xl font-bold text-[#1C355E] dark:text-white tabular-nums">
+                  {criticalCount.toLocaleString("ar-SA-u-nu-latn")}
+                </p>
               </div>
-              <div className="rounded-xl bg-red-500/10 p-2.5">
-                <AlertTriangle className="h-5 w-5 text-red-400" />
+              <div className="rounded-xl bg-red-500/10 p-2.5 text-red-600 dark:text-red-400">
+                <AlertTriangle className="h-5 w-5" />
               </div>
+            </div>
+            <div className="mt-2 text-xs text-red-700/70 dark:text-red-300/70 font-medium">
+              تستلزم أولوية المتابعة والدعم العاجل
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-950/60 to-blue-900/30 border border-blue-800/20">
+        <Card className="border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-blue-600/5 dark:from-blue-950/40 dark:to-blue-900/20 shadow-sm">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-blue-300">قيد العلاج حالياً</p>
-                <p className="mt-1 text-2xl font-black text-blue-100 tabular-nums">{activeCount}</p>
+                <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">قيد العلاج حالياً</p>
+                <p className="mt-2 text-2xl font-bold text-[#1C355E] dark:text-white tabular-nums">
+                  {activeCount.toLocaleString("ar-SA-u-nu-latn")}
+                </p>
               </div>
-              <div className="rounded-xl bg-blue-500/10 p-2.5">
-                <Activity className="h-5 w-5 text-blue-400" />
+              <div className="rounded-xl bg-blue-500/10 p-2.5 text-blue-600 dark:text-blue-400">
+                <Activity className="h-5 w-5" />
               </div>
+            </div>
+            <div className="mt-2 text-xs text-blue-700/70 dark:text-blue-300/70 font-medium">
+              يتلقى دعماً طبياً نشطاً من المنظمة
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-950/60 to-emerald-900/30 border border-emerald-800/20">
+        <Card className="border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 dark:from-emerald-950/40 dark:to-emerald-900/20 shadow-sm">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-emerald-300">التكلفة الشهرية الإجمالية</p>
-                <p className="mt-1 text-xl font-black text-emerald-100 tabular-nums">${totalCost.toLocaleString()}</p>
+                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">التكلفة الشهرية الإجمالية</p>
+                <p className="mt-2 text-2xl font-bold text-[#1C355E] dark:text-white tabular-nums">
+                  ${totalCost.toLocaleString()}
+                </p>
               </div>
-              <div className="rounded-xl bg-emerald-500/10 p-2.5">
-                <DollarSign className="h-5 w-5 text-emerald-400" />
+              <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400">
+                <DollarSign className="h-5 w-5" />
               </div>
+            </div>
+            <div className="mt-2 text-xs text-emerald-700/70 dark:text-emerald-300/70 font-medium">
+              إجمالي تكاليف الدعم الطبي الشهرية
             </div>
           </CardContent>
         </Card>
