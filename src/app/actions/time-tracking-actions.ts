@@ -13,7 +13,7 @@ export async function logTimeEntryAction(data: {
 }) {
   try {
     const currentUser = await getCurrentUser()
-    const adminUser = await prisma.user.findFirst({ where: { role: { in: ["GENERAL_MANAGER", "EXECUTIVE_DIRECTOR", "ADMIN"] } } })
+    const adminUser = await prisma.user.findFirst({ where: { role: { in: ["ADMIN", "MANAGER"] } } })
     const targetUserId = data.userId || currentUser?.id || adminUser?.id
 
     if (!targetUserId) {

@@ -13,7 +13,7 @@ export async function createDocumentPolicyAction(data: {
 }) {
   try {
     const user = await getCurrentUser()
-    const adminUser = await prisma.user.findFirst({ where: { role: { in: ["GENERAL_MANAGER", "EXECUTIVE_DIRECTOR", "ADMIN"] } } })
+    const adminUser = await prisma.user.findFirst({ where: { role: { in: ["ADMIN", "MANAGER"] } } })
     const creatorId = user?.id || adminUser?.id
 
     if (!creatorId) {
