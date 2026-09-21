@@ -17,7 +17,7 @@ export async function createTaskAction(data: {
   try {
     const user = await getCurrentUser()
     const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN" }
+      where: { role: { in: ["GENERAL_MANAGER", "EXECUTIVE_DIRECTOR", "ADMIN"] } }
     })
     const creatorId = user?.id || adminUser?.id
 
