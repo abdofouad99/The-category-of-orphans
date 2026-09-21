@@ -135,14 +135,20 @@ export function AnnouncementsClient({
             <div className="divide-y divide-border/20">
               {announcements.map((ann) => {
                 const typeInfo = typeMap[ann.type] || { label: ann.type, badge: "bg-slate-500/10 text-slate-500 border-slate-500/20" }
+                const isExpired = ann.expiresAt && new Date(ann.expiresAt) < new Date()
                 return (
-                  <div key={ann.id} className="p-4 hover:bg-muted/30 transition-colors">
+                  <div key={ann.id} className={`p-4 hover:bg-muted/30 transition-colors ${isExpired ? "opacity-60" : ""}`}>
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-1.5 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${typeInfo.badge}`}>
                             {typeInfo.label}
                           </span>
+                          {isExpired && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-slate-500/10 text-slate-500 border-slate-500/20">
+                              منتهي الصلاحية
+                            </span>
+                          )}
                           <h3 className="text-sm font-bold text-foreground">{ann.title}</h3>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
@@ -158,8 +164,9 @@ export function AnnouncementsClient({
                             {new Date(ann.createdAt).toLocaleDateString("ar-SA")}
                           </span>
                           {ann.expiresAt && (
-                            <span className="text-[10px] text-amber-500 font-mono">
-                              (ينتهي: {new Date(ann.expiresAt).toLocaleDateString("ar-SA")})
+                            <span className={`text-[10px] font-mono ${isExpired ? "text-rose-400" : "text-amber-500"}`}>
+                              {isExpired ? "انتهى في: " : "ينتهي: "}
+                              {new Date(ann.expiresAt).toLocaleDateString("ar-SA")}
                             </span>
                           )}
                         </div>

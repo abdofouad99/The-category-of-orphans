@@ -47,6 +47,8 @@ export function DocsClient({
 
   const filteredDocs = filterDept === "ALL"
     ? docs
+    : filterDept === "NONE"
+    ? docs.filter(d => !d.department)
     : docs.filter(d => d.department?.id === filterDept)
 
   return (
@@ -71,6 +73,43 @@ export function DocsClient({
             رفع مستند جديد
           </Button>
         </div>
+      </div>
+
+      {/* Stats + Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-2.5 shadow-sm flex items-center gap-2">
+            <FileText className="h-4 w-4 text-purple-500" />
+            <span className="text-sm font-black text-foreground">{totalDocs}</span>
+            <span className="text-xs text-muted-foreground">مستند مرفوع</span>
+          </div>
+          <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-2.5 shadow-sm flex items-center gap-2">
+            <Globe className="h-4 w-4 text-emerald-500" />
+            <span className="text-sm font-black text-foreground">{docs.filter(d => d.isPublic).length}</span>
+            <span className="text-xs text-muted-foreground">عام</span>
+          </div>
+          <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-2.5 shadow-sm flex items-center gap-2">
+            <Lock className="h-4 w-4 text-amber-500" />
+            <span className="text-sm font-black text-foreground">{docs.filter(d => !d.isPublic).length}</span>
+            <span className="text-xs text-muted-foreground">خاص</span>
+          </div>
+        </div>
+        {departments.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+            <select
+              value={filterDept}
+              onChange={(e) => setFilterDept(e.target.value)}
+              className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="ALL">جميع الأقسام ({docs.length})</option>
+              <option value="NONE">عام للمؤسسة</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Docs Grid */}

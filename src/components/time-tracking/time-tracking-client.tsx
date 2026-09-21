@@ -174,13 +174,29 @@ export function TimeTrackingClient({
                       <td className="py-3 px-4 text-muted-foreground">
                         {entry.task?.department?.name || "عام"}
                       </td>
-                      <td className="py-3 px-4 font-mono text-muted-foreground">
-                        {new Date(entry.startTime).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+                      <td className="py-3 px-4 text-muted-foreground">
+                        <div className="font-mono text-[10px]">
+                          {new Date(entry.startTime).toLocaleDateString("ar-SA", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                        </div>
+                        <div className="font-mono text-xs font-bold text-foreground">
+                          {new Date(entry.startTime).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+                        </div>
                       </td>
-                      <td className="py-3 px-4 font-mono text-muted-foreground">
-                        {entry.endTime
-                          ? new Date(entry.endTime).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })
-                          : "قيد العمل"}
+                      <td className="py-3 px-4 text-muted-foreground">
+                        {entry.endTime ? (
+                          <>
+                            <div className="font-mono text-[10px]">
+                              {new Date(entry.endTime).toLocaleDateString("ar-SA", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                            </div>
+                            <div className="font-mono text-xs font-bold text-foreground">
+                              {new Date(entry.endTime).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/10 text-teal-500 border border-teal-500/20 animate-pulse">
+                            قيد العمل
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">

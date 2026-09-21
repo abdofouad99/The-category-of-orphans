@@ -1,20 +1,33 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeftRight,
   List,
   Plus,
-  Clock,
-  CheckCircle2,
-  Calendar,
-  Building2,
   User,
+  Building2,
+  Calendar,
+  ChevronDown,
+  X,
+  CheckCircle2,
+  Clock,
+  RefreshCw,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { CreateTaskDialog } from "@/components/tasks/create-task-dialog"
+import { updateTaskStatusAction } from "@/app/actions/task-actions"
+import { TaskStatus } from "@prisma/client"
 
 interface TaskItem {
   id: string
@@ -42,17 +55,31 @@ const priorityMap: Record<string, { label: string; color: string }> = {
   LOW: { label: "منخفضة", color: "text-slate-500 bg-slate-500/10 border-slate-500/20" },
 }
 
+const statusOptions: { value: string; label: string }[] = [
+  { value: "NEW", label: "جديدة" },
+  { value: "NOT_STARTED", label: "لم تبدأ" },
+  { value: "IN_PROGRESS", label: "قيد التنفيذ" },
+  { value: "PENDING_DEPT_HEAD_REVIEW", label: "مراجعة رئيس القسم" },
+  { value: "PENDING_GM_APPROVAL", label: "موافقة المدير العام" },
+  { value: "COMPLETED", label: "مكتملة" },
+  { value: "APPROVED", label: "معتمدة" },
+  { value: "REJECTED", label: "مرفوضة" },
+]
+
 export function KanbanBoardClient({
   tasks,
   departments,
   users,
 }: KanbanBoardClientProps) {
+  const router = useRouter()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null)
+  const [updating, setUpdating] = useState(false)
 
   const columns = {
     NEW: {
       title: "مهام جديدة واردة",
-      tasks: tasks.filter((t) => t.status === "NEW"),
+      tasks: tasks.filter((t) => t.status === "NEW" || t.status === "NOT_STARTED"),
       color: "border-t-blue-500",
       badge: "bg-blue-500/10 text-blue-500",
     },
@@ -81,6 +108,15 @@ export function KanbanBoardClient({
       color: "border-t-emerald-500",
       badge: "bg-emerald-500/10 text-emerald-500",
     },
+  }
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!selectedTask) return
+    setUpdating(true)
+    await updateTaskStatusAction(selectedTask.id, newStatus as TaskStatus)
+    setUpdating(false)
+    setSelectedTask(null)
+    router.refresh()
   }
 
   return (
@@ -113,6 +149,18 @@ export function KanbanBoardClient({
         </div>
       </div>
 
+      {/* Summary Stats */}
+      <div className="flex items-center gap-3 text-xs flex-wrap">
+        <span className="px-3 py-1.5 rounded-full bg-muted/60 border border-border/40 text-muted-foreground">
+          إجمالي المهام: <strong className="text-foreground">{tasks.length}</strong>
+        </span>
+        {Object.entries(columns).map(([key, col]) => (
+          <span key={key} className={`px-3 py-1.5 rounded-full border text-[11px] font-bold ${col.badge} border-current/20`}>
+            {col.title}: {col.tasks.length}
+          </span>
+        ))}
+      </div>
+
       {/* Kanban Columns */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {Object.entries(columns).map(([colKey, col]) => (
@@ -135,7 +183,11 @@ export function KanbanBoardClient({
                 col.tasks.map((task) => {
                   const priorityInfo = priorityMap[task.priority] || { label: task.priority, color: "text-slate-500" }
                   return (
-                    <Card key={task.id} className="border border-border/60 bg-card shadow-sm hover:shadow-md transition-all cursor-pointer">
+                    <Card
+                      key={task.id}
+                      className="border border-border/60 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group"
+                      onClick={() => setSelectedTask(task)}
+                    >
                       <CardContent className="p-3.5 space-y-2.5">
                         <div className="flex items-center justify-between gap-1">
                           <span className="font-mono text-[11px] font-bold text-primary">#{task.taskNumber}</span>
@@ -151,6 +203,14 @@ export function KanbanBoardClient({
                             {task.description}
                           </p>
                         )}
+                        {task.dueDate && (
+                          <div className="flex items-center gap-1 text-[10px] text-amber-500">
+                            <Calendar className="h-3 w-3" />
+                            <span className="font-mono">
+                              {new Date(task.dueDate).toLocaleDateString("ar-SA")}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-2 border-t border-border/30">
                           <span className="font-medium text-foreground flex items-center gap-1">
                             <User className="h-3 w-3 text-muted-foreground" />
@@ -161,6 +221,9 @@ export function KanbanBoardClient({
                             {task.department?.name || "عام"}
                           </span>
                         </div>
+                        <p className="text-[10px] text-center text-muted-foreground/50 group-hover:text-primary/60 transition-colors">
+                          اضغط لتغيير الحالة ↑
+                        </p>
                       </CardContent>
                     </Card>
                   )
@@ -171,7 +234,51 @@ export function KanbanBoardClient({
         ))}
       </div>
 
-      {/* Modal Dialog */}
+      {/* Task Quick-Edit Dialog */}
+      <Dialog open={!!selectedTask} onOpenChange={(o) => { if (!o) setSelectedTask(null) }}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader className="text-right">
+            <DialogTitle className="text-sm font-black flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 text-primary" />
+              تحديث حالة المهمة #{selectedTask?.taskNumber}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-right mt-1">
+              {selectedTask?.title}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 mt-3">
+            {statusOptions.map((opt) => (
+              <button
+                key={opt.value}
+                disabled={updating || selectedTask?.status === opt.value}
+                onClick={() => handleStatusChange(opt.value)}
+                className={`w-full text-right px-4 py-2.5 rounded-lg border text-xs font-bold transition-all ${
+                  selectedTask?.status === opt.value
+                    ? "bg-primary/10 border-primary text-primary cursor-default"
+                    : "border-border/50 bg-card hover:bg-muted/50 hover:border-primary/30 text-foreground"
+                } disabled:opacity-60`}
+              >
+                {selectedTask?.status === opt.value && (
+                  <CheckCircle2 className="h-3.5 w-3.5 inline ml-1.5 text-primary" />
+                )}
+                {opt.label}
+                {selectedTask?.status === opt.value && (
+                  <span className="text-[10px] text-primary mr-2">(الحالة الحالية)</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {updating && (
+            <p className="text-xs text-center text-muted-foreground animate-pulse mt-2">
+              جارٍ التحديث...
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Task Modal Dialog */}
       <CreateTaskDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}

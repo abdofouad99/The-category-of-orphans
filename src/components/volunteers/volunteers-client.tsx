@@ -167,6 +167,7 @@ export function VolunteersClient({
               >
                 <option value="ALL">جميع الحالات ({volunteers.length})</option>
                 <option value="ACTIVE">نشط ومتاح</option>
+                <option value="PENDING">قيد المراجعة</option>
                 <option value="INACTIVE">غير نشط / معلق</option>
               </select>
             </div>
@@ -246,10 +247,13 @@ export function VolunteersClient({
                           className={`px-2 py-0.5 rounded-full text-[10px] font-bold border cursor-pointer bg-background focus:outline-none focus:ring-1 focus:ring-primary ${
                             vol.status === "ACTIVE"
                               ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                              : vol.status === "PENDING"
+                              ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
                               : "bg-slate-500/10 text-slate-500 border-slate-500/20"
                           }`}
                         >
                           <option value="ACTIVE">نشط ومتاح</option>
+                          <option value="PENDING">قيد المراجعة</option>
                           <option value="INACTIVE">غير نشط</option>
                         </select>
                       </td>
