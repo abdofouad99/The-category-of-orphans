@@ -1,0 +1,28 @@
+name: Supabase 24/7 Keep-Alive
+
+on:
+  schedule:
+    # Run every 3 days at 04:00 AM UTC (avoids 7-day inactivity pause)
+    - cron: '0 4 */3 * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions dashboard
+
+jobs:
+  ping-supabase:
+    name: Ping Supabase to Prevent Auto-Pause
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          echo "Sending keep-alive request to Supabase API..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6eHFvanpocmtkcWZ1b2FqeG9vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzAwNjIsImV4cCI6MjEwNDgwNjA2Mn0.rb2dfpSn9U_CCisKzUqzGozbOg4f2WkdtKwqBks4klY' }}" \
+            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6eHFvanpocmtkcWZ1b2FqeG9vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzAwNjIsImV4cCI6MjEwNDgwNjA2Mn0.rb2dfpSn9U_CCisKzUqzGozbOg4f2WkdtKwqBks4klY' }}" \
+            "https://fzxqojzhrkdqfuoajxoo.supabase.co/rest/v1/")
+          
+          echo "HTTP response status code: $STATUS"
+          if [ "$STATUS" -eq 200 ] || [ "$STATUS" -eq 204 ]; then
+            echo "✅ Supabase project is active and alive! 7-day pause timer reset."
+          else
+            echo "⚠️ Response status was $STATUS, checking direct health endpoint..."
+            curl -s -I "https://fzxqojzhrkdqfuoajxoo.supabase.co/auth/v1/health" || true
+          fi
