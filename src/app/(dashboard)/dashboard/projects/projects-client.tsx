@@ -161,17 +161,37 @@ function printDeliveryVoucher(project: any) {
 function exportBankTransferFile(project: any) {
   const links = project.beneficiaryLinks || []
   const rows = [
-    ["م", "اسم المستفيد", "رقم الحساب البنكي", "رقم الهاتف", "المبلغ", "العملة", "رقم الدفعة", "الملاحظات"],
-    ...links.map((l: any, i: number) => [
-      i + 1,
-      l.beneficiary?.fullName || "-",
-      l.beneficiary?.bankAccountNumber || l.beneficiary?.family?.accountNumber || "-",
-      l.beneficiary?.family?.headPhoneNumber || "-",
-      l.unitValue || "-",
-      l.currency || project.currency || "YER",
-      l.batchNumber,
-      l.deliveredItem || "",
-    ])
+    ["م", "اسم المستفيد", "رقم حساب الكريمي", "اسم صاحب الحساب", "رقم الهاتف", "المبلغ", "العملة", "رقم الدفعة", "الملاحظات"],
+    ...links.map((l: any, i: number) => {
+      const accountNum =
+        l.beneficiary?.kuraimiAccount ||
+        l.beneficiary?.kuraimiAccountYemeni ||
+        l.beneficiary?.family?.kuraimiAccountYemeni ||
+        l.beneficiary?.family?.kuraimiAccountSaudi ||
+        "-"
+
+      const accountHolder =
+        l.beneficiary?.kuraimiAccountHolder ||
+        l.beneficiary?.fullName ||
+        "-"
+
+      const phone =
+        l.beneficiary?.phoneNumber ||
+        l.beneficiary?.family?.headPhoneNumber ||
+        "-"
+
+      return [
+        i + 1,
+        l.beneficiary?.fullName || "-",
+        accountNum,
+        accountHolder,
+        phone,
+        l.unitValue || "-",
+        l.currency || project.currency || "YER",
+        l.batchNumber,
+        l.deliveredItem || "",
+      ]
+    }),
   ]
 
   const csvContent = "\uFEFF" + rows.map((r: (string | number)[]) => r.map((v: string | number) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n")
@@ -179,7 +199,7 @@ function exportBankTransferFile(project: any) {
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url
-  link.download = `كشف_تحويلات_${project.name.slice(0, 30)}.csv`
+  link.download = `كشف_تحويلات_الكريمي_${project.name.slice(0, 30)}.csv`
   link.click()
   URL.revokeObjectURL(url)
 }

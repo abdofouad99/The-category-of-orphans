@@ -22,7 +22,11 @@ async function getProjects() {
           deletedAt: null,
         },
         include: {
-          beneficiary: true,
+          beneficiary: {
+            include: {
+              family: true,
+            },
+          },
         },
       },
     },
@@ -39,7 +43,11 @@ async function getDistributions() {
     },
     include: {
       project: true,
-      beneficiary: true,
+      beneficiary: {
+        include: {
+          family: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -77,6 +85,7 @@ export default async function ProjectsPage() {
   // Serialize Prisma Decimals and Dates for safe Client Component transfer
   const serializedProjects = JSON.parse(JSON.stringify(projects))
   const serializedDistributions = JSON.parse(JSON.stringify(distributions))
+  const serializedBeneficiaries = JSON.parse(JSON.stringify(beneficiaries))
 
   // KPI Calculations
   const activeProjectsCount = projects.filter((p) => p.status === "ACTIVE" || p.status === "COMPLETED").length
@@ -100,7 +109,7 @@ export default async function ProjectsPage() {
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <ProjectFormSheet />
-          <DistributionFormSheet projects={serializedProjects} beneficiaries={beneficiaries} />
+          <DistributionFormSheet projects={serializedProjects} beneficiaries={serializedBeneficiaries} />
         </div>
       </div>
 
@@ -191,7 +200,7 @@ export default async function ProjectsPage() {
       <ProjectsClient
         initialProjects={serializedProjects}
         initialDistributions={serializedDistributions}
-        activeBeneficiaries={beneficiaries}
+        activeBeneficiaries={serializedBeneficiaries}
       />
     </div>
   )

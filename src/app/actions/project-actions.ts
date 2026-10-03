@@ -7,6 +7,16 @@ import { ProjectCategory, ProjectStatus, Currency } from "@prisma/client"
 import { diffObjects, createAuditLog } from "@/lib/audit-utils"
 import { getCurrentUser } from "@/app/actions/auth-actions"
 
+// Helper to find administrative audit user
+async function getAuditUser() {
+  const currentUser = await getCurrentUser()
+  if (currentUser?.id) return currentUser
+
+  return await prisma.user.findFirst({
+    where: { role: { in: ["ADMIN", "MANAGER"] }, isActive: true },
+  })
+}
+
 // =============================================================================
 // PROJECT VALIDATION SCHEMA
 // =============================================================================
@@ -76,11 +86,8 @@ export async function createProject(rawInput: any) {
     }
     const validatedData = projectSchema.parse(rawInput)
 
-    // Get Admin user for audit log
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN" },
-    })
-    if (!adminUser) {
+    const auditUser = await getAuditUser()
+    if (!auditUser) {
       return { success: false, error: "فشل النظام في تحديد هوية المستخدم المسؤول عن الإدخال" }
     }
 
@@ -95,7 +102,7 @@ export async function createProject(rawInput: any) {
         targetCount: validatedData.targetCount,
         startDate: validatedData.startDate,
         endDate: validatedData.endDate,
-        createdById: adminUser.id,
+        createdById: auditUser.id,
       },
     })
 
@@ -105,7 +112,7 @@ export async function createProject(rawInput: any) {
       entityId: project.id,
       action: "CREATE",
       changes: diffObjects({}, project),
-      userId: adminUser.id,
+      userId: auditUser.id,
     })
 
     revalidatePath("/dashboard/projects")
@@ -134,9 +141,7 @@ export async function updateProject(id: string, rawInput: any) {
       return { success: false, error: "المشروع المطلوب غير موجود بالنظام" }
     }
 
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN", isActive: true },
-    })
+    const auditUser = await getAuditUser()
 
     const updatedProject = await prisma.project.update({
       where: { id },
@@ -159,7 +164,7 @@ export async function updateProject(id: string, rawInput: any) {
       entityId: id,
       action: "UPDATE",
       changes: diffObjects(projectExists, updatedProject),
-      userId: adminUser?.id,
+      userId: auditUser?.id,
     })
 
     revalidatePath("/dashboard/projects")
@@ -186,9 +191,7 @@ export async function deleteProject(id: string) {
       return { success: false, error: "المشروع المطلوب غير موجود بالنظام" }
     }
 
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN", isActive: true },
-    })
+    const auditUser = await getAuditUser()
 
     const deletedProject = await prisma.project.update({
       where: { id },
@@ -204,7 +207,7 @@ export async function deleteProject(id: string) {
       entityId: id,
       action: "DELETE",
       changes: diffObjects(projectToDelete, deletedProject),
-      userId: adminUser?.id,
+      userId: auditUser?.id,
     })
 
     revalidatePath("/dashboard/projects")
@@ -260,11 +263,8 @@ export async function createDistribution(rawInput: any) {
       }
     }
 
-    // Get Admin user for audit
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN" },
-    })
-    if (!adminUser) {
+    const auditUser = await getAuditUser()
+    if (!auditUser) {
       return { success: false, error: "فشل النظام في تحديد هوية المستخدم المسؤول عن الإدخال" }
     }
 
@@ -287,7 +287,7 @@ export async function createDistribution(rawInput: any) {
         isDelivered: validatedData.isDelivered,
         deliveryNotes: validatedData.deliveryNotes || null,
         deliveryDate,
-        recordedById: adminUser.id,
+        recordedById: auditUser.id,
       },
     })
 
@@ -297,7 +297,7 @@ export async function createDistribution(rawInput: any) {
       entityId: distribution.id,
       action: "CREATE",
       changes: diffObjects({}, distribution),
-      userId: adminUser.id,
+      userId: auditUser.id,
     })
 
     revalidatePath("/dashboard/projects")
@@ -319,9 +319,7 @@ export async function updateDistributionStatus(id: string, isDelivered: boolean,
     if (currentUser?.role === "VIEWER") {
       return { success: false, error: "عذراً، هذا الحساب مخصص للقراءة والعرض فقط، ولا يسمح بالمسح أو التعديل." }
     }
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN" },
-    })
+    const auditUser = await getAuditUser()
 
     const distributionToUpdate = await prisma.projectBeneficiary.findUnique({
       where: { id },
@@ -334,7 +332,7 @@ export async function updateDistributionStatus(id: string, isDelivered: boolean,
       data: {
         isDelivered,
         deliveryDate,
-        recordedById: adminUser?.id || null,
+        recordedById: auditUser?.id || null,
       },
     })
 
@@ -344,7 +342,7 @@ export async function updateDistributionStatus(id: string, isDelivered: boolean,
       entityId: id,
       action: "UPDATE",
       changes: diffObjects(distributionToUpdate, updatedDistribution),
-      userId: adminUser?.id,
+      userId: auditUser?.id,
     })
 
     revalidatePath("/dashboard/projects")
@@ -370,9 +368,7 @@ export async function deleteDistribution(id: string) {
       return { success: false, error: "سجل التوزيع غير موجود في النظام" }
     }
 
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN", isActive: true },
-    })
+    const auditUser = await getAuditUser()
 
     const deletedDistribution = await prisma.projectBeneficiary.update({
       where: { id },
@@ -387,7 +383,7 @@ export async function deleteDistribution(id: string) {
       entityId: id,
       action: "DELETE",
       changes: diffObjects(distributionToDelete, deletedDistribution),
-      userId: adminUser?.id,
+      userId: auditUser?.id,
     })
 
     revalidatePath("/dashboard/projects")
@@ -396,6 +392,6 @@ export async function deleteDistribution(id: string) {
     return { success: true }
   } catch (error: any) {
     console.error("Error deleting distribution:", error)
-    return { success: false, error: "حدث خطأ أثناء حذف سجل التوزيع" }
+    return { success: false, error: "فشل حذف سجل التوزيع" }
   }
 }
