@@ -7,6 +7,16 @@ import { Currency, PaymentCycle, SponsorshipStatus } from "@prisma/client"
 import { diffObjects, createAuditLog } from "@/lib/audit-utils"
 import { getCurrentUser } from "@/app/actions/auth-actions"
 
+// Helper to find administrative audit user
+async function getAuditUser() {
+  const currentUser = await getCurrentUser()
+  if (currentUser?.id) return currentUser
+
+  return await prisma.user.findFirst({
+    where: { role: { in: ["ADMIN", "MANAGER"] }, isActive: true },
+  })
+}
+
 // =============================================================================
 // SPONSOR VALIDATION SCHEMA
 // =============================================================================
@@ -80,9 +90,7 @@ export async function createSponsor(rawInput: any) {
       }
     }
 
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN", isActive: true },
-    })
+    const auditUser = await getAuditUser()
 
     const sponsor = await prisma.sponsor.create({
       data: {
@@ -102,7 +110,7 @@ export async function createSponsor(rawInput: any) {
       entityId: sponsor.id,
       action: "CREATE",
       changes: diffObjects({}, sponsor),
-      userId: adminUser?.id,
+      userId: auditUser?.id,
     })
 
     revalidatePath("/dashboard/sponsors")
@@ -151,9 +159,7 @@ export async function updateSponsor(id: string, rawInput: any) {
       }
     }
 
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN", isActive: true },
-    })
+    const auditUser = await getAuditUser()
 
     const updatedSponsor = await prisma.sponsor.update({
       where: { id },
@@ -174,7 +180,7 @@ export async function updateSponsor(id: string, rawInput: any) {
       entityId: id,
       action: "UPDATE",
       changes: diffObjects(sponsorToUpdate, updatedSponsor),
-      userId: adminUser?.id,
+      userId: auditUser?.id,
     })
 
     revalidatePath("/dashboard/sponsors")
@@ -201,9 +207,7 @@ export async function deleteSponsor(id: string) {
       return { success: false, error: "الكفيل المطلوب غير موجود بالنظام" }
     }
 
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN", isActive: true },
-    })
+    const auditUser = await getAuditUser()
 
     const deletedSponsor = await prisma.sponsor.update({
       where: { id },
@@ -218,7 +222,7 @@ export async function deleteSponsor(id: string) {
       entityId: id,
       action: "DELETE",
       changes: diffObjects(sponsorToDelete, deletedSponsor),
-      userId: adminUser?.id,
+      userId: auditUser?.id,
     })
 
     revalidatePath("/dashboard/sponsors")
@@ -273,11 +277,8 @@ export async function createSponsorship(rawInput: any) {
       }
     }
 
-    // Get Admin user for audit (required relation in schema)
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN" },
-    })
-    if (!adminUser) {
+    const auditUser = await getAuditUser()
+    if (!auditUser) {
       return { success: false, error: "فشل النظام في تحديد هوية المستخدم المسؤول عن الإدخال" }
     }
 
@@ -295,7 +296,7 @@ export async function createSponsorship(rawInput: any) {
         endDate: validatedData.endDate,
         sponsorshipNotes: validatedData.sponsorshipNotes || null,
         notes: validatedData.notes || null,
-        createdById: adminUser.id,
+        createdById: auditUser.id,
       },
     })
 
@@ -305,7 +306,7 @@ export async function createSponsorship(rawInput: any) {
       entityId: sponsorship.id,
       action: "CREATE",
       changes: diffObjects({}, sponsorship),
-      userId: adminUser.id,
+      userId: auditUser.id,
     })
 
     revalidatePath("/dashboard/sponsors")
@@ -327,9 +328,7 @@ export async function updateSponsorshipStatus(id: string, status: SponsorshipSta
     if (currentUser?.role === "VIEWER") {
       return { success: false, error: "عذراً، هذا الحساب مخصص للقراءة والعرض فقط، ولا يسمح بالمسح أو التعديل." }
     }
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN", isActive: true },
-    })
+    const auditUser = await getAuditUser()
 
     const sponsorshipToUpdate = await prisma.sponsorship.findUnique({
       where: { id },
@@ -346,7 +345,7 @@ export async function updateSponsorshipStatus(id: string, status: SponsorshipSta
       entityId: id,
       action: "UPDATE",
       changes: diffObjects(sponsorshipToUpdate, updatedSponsorship),
-      userId: adminUser?.id,
+      userId: auditUser?.id,
     })
 
     revalidatePath("/dashboard/sponsors")
@@ -372,9 +371,7 @@ export async function deleteSponsorship(id: string) {
       return { success: false, error: "الكفالة المطلوبة غير موجودة في النظام" }
     }
 
-    const adminUser = await prisma.user.findFirst({
-      where: { role: "ADMIN", isActive: true },
-    })
+    const auditUser = await getAuditUser()
 
     const deletedSponsorship = await prisma.sponsorship.update({
       where: { id },
@@ -390,7 +387,7 @@ export async function deleteSponsorship(id: string) {
       entityId: id,
       action: "DELETE",
       changes: diffObjects(sponsorshipToDelete, deletedSponsorship),
-      userId: adminUser?.id,
+      userId: auditUser?.id,
     })
 
     revalidatePath("/dashboard/sponsors")

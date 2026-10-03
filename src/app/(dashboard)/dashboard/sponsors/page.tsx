@@ -134,7 +134,7 @@ export default async function SponsorsPage() {
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <SponsorFormSheet />
-          <SponsorshipFormSheet sponsors={serializedSponsors} orphans={orphans} families={families} />
+          <SponsorshipFormSheet sponsors={serializedSponsors} orphans={JSON.parse(JSON.stringify(orphans))} families={JSON.parse(JSON.stringify(families))} />
         </div>
       </div>
 
@@ -226,8 +226,8 @@ export default async function SponsorsPage() {
       <SponsorsClient
         initialSponsors={serializedSponsors}
         initialSponsorships={serializedSponsorships}
-        activeOrphans={orphans}
-        activeFamilies={families}
+        activeOrphans={JSON.parse(JSON.stringify(orphans))}
+        activeFamilies={JSON.parse(JSON.stringify(families))}
       />
     </div>
   )
