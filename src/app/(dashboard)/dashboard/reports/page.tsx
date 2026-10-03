@@ -9,6 +9,7 @@ import { ReportsClient } from "./reports-client"
 
 async function getBeneficiariesForReports() {
   return await prisma.beneficiary.findMany({
+    where: { deletedAt: null },
     include: {
       family: {
         include: {
@@ -92,17 +93,19 @@ export default async function ReportsPage() {
     <div className="space-y-6">
       {/* ── Page Header (Hidden on Print) ── */}
       <div className="print:hidden">
-        <h2 className="text-xl font-bold text-white md:text-2xl">توليد التقارير والإحصائيات</h2>
-        <p className="mt-1 text-sm text-slate-400 font-medium">
+        <h2 className="text-xl font-black text-slate-900 dark:text-white md:text-2xl">
+          توليد التقارير والإحصائيات
+        </h2>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 font-medium">
           قم بتصفية قاعدة بيانات المستفيدين بناءً على الموقع الجغرافي، تصنيفات الهشاشة، مستويات الفقر، حالة الكفالة، أو المراحل التعليمية مع إمكانية التصدير أو الطباعة كملف PDF.
         </p>
       </div>
 
       {/* ── Reports Engine Client ── */}
       <ReportsClient
-        initialBeneficiaries={beneficiaries}
-        geography={geography}
-        sponsors={sponsors}
+        initialBeneficiaries={JSON.parse(JSON.stringify(beneficiaries))}
+        geography={JSON.parse(JSON.stringify(geography))}
+        sponsors={JSON.parse(JSON.stringify(sponsors))}
       />
     </div>
   )

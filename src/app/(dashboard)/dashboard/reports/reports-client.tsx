@@ -1,14 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
   Search,
-  FileText,
   Download,
   Printer,
   X,
   SlidersHorizontal,
-  Info,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { exportToExcel } from "@/lib/excel-export"
@@ -44,6 +45,10 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
   const [sponsorId, setSponsorId] = useState<string>("ALL")
   const [healthQuery, setHealthQuery] = useState<string>("")
 
+  // Pagination for screen preview
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 50
+
   // Cascading districts list
   const activeGov = geography.find((g) => g.id.toString() === govId)
   const activeDistricts = activeGov ? activeGov.districts : []
@@ -53,76 +58,108 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
     setDistId("ALL")
   }, [govId])
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [
+    searchTerm,
+    govId,
+    distId,
+    category,
+    povertyLevel,
+    sponsorshipStatus,
+    educationalStage,
+    gender,
+    disability,
+    sponsorId,
+    healthQuery,
+  ])
+
   // Filter Logic
-  const filteredBeneficiaries = initialBeneficiaries.filter((b) => {
-    // Search Name / National ID
-    const matchesSearch =
-      b.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (b.nationalId && b.nationalId.includes(searchTerm)) ||
-      (b.orphanCode && b.orphanCode.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredBeneficiaries = useMemo(() => {
+    return initialBeneficiaries.filter((b) => {
+      // Search Name / National ID
+      const matchesSearch =
+        b.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (b.nationalId && b.nationalId.includes(searchTerm)) ||
+        (b.orphanCode && b.orphanCode.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    // Geography
-    const matchesGov =
-      govId === "ALL" ||
-      b.family?.subDistrict?.district?.governorate?.id?.toString() === govId
-    const matchesDist =
-      distId === "ALL" ||
-      b.family?.subDistrict?.district?.id?.toString() === distId
+      // Geography
+      const matchesGov =
+        govId === "ALL" ||
+        b.family?.subDistrict?.district?.governorate?.id?.toString() === govId
+      const matchesDist =
+        distId === "ALL" ||
+        b.family?.subDistrict?.district?.id?.toString() === distId
 
-    // Category
-    const matchesCategory = category === "ALL" || b.category === category
+      // Category
+      const matchesCategory = category === "ALL" || b.category === category
 
-    // Poverty
-    const matchesPoverty =
-      povertyLevel === "ALL" || b.family?.povertyLevel === povertyLevel
+      // Poverty
+      const matchesPoverty =
+        povertyLevel === "ALL" || b.family?.povertyLevel === povertyLevel
 
-    // Sponsorship
-    const isSponsored = b.sponsorships && b.sponsorships.length > 0
-    const matchesSponsorship =
-      sponsorshipStatus === "ALL" ||
-      (sponsorshipStatus === "SPONSORED" && isSponsored) ||
-      (sponsorshipStatus === "UNSPONSORED" && !isSponsored)
+      // Sponsorship
+      const isSponsored = b.sponsorships && b.sponsorships.length > 0
+      const matchesSponsorship =
+        sponsorshipStatus === "ALL" ||
+        (sponsorshipStatus === "SPONSORED" && isSponsored) ||
+        (sponsorshipStatus === "UNSPONSORED" && !isSponsored)
 
-    // Sponsor
-    const matchesSponsor =
-      sponsorId === "ALL" ||
-      (b.sponsorships && b.sponsorships.some((s: any) => s.sponsorId === sponsorId))
+      // Sponsor
+      const matchesSponsor =
+        sponsorId === "ALL" ||
+        (b.sponsorships && b.sponsorships.some((s: any) => s.sponsorId === sponsorId))
 
-    // Education
-    const matchesEducation =
-      educationalStage === "ALL" ||
-      (b.educationalStage && b.educationalStage.toLowerCase() === educationalStage.toLowerCase())
+      // Education
+      const matchesEducation =
+        educationalStage === "ALL" ||
+        (b.educationalStage && b.educationalStage.toLowerCase() === educationalStage.toLowerCase())
 
-    // Gender
-    const matchesGender = gender === "ALL" || b.gender === gender
+      // Gender
+      const matchesGender = gender === "ALL" || b.gender === gender
 
-    // Disability
-    const matchesDisability =
-      disability === "ALL" ||
-      (disability === "YES" && b.disability) ||
-      (disability === "NO" && !b.disability)
+      // Disability
+      const matchesDisability =
+        disability === "ALL" ||
+        (disability === "YES" && b.disability) ||
+        (disability === "NO" && !b.disability)
 
-    // Health / Disease Search
-    const matchesHealth =
-      !healthQuery.trim() ||
-      (b.healthStatus && b.healthStatus.toLowerCase().includes(healthQuery.toLowerCase())) ||
-      (b.disabilityType && b.disabilityType.toLowerCase().includes(healthQuery.toLowerCase())) ||
-      (b.disabilityDetails && b.disabilityDetails.toLowerCase().includes(healthQuery.toLowerCase()))
+      // Health / Disease Search
+      const matchesHealth =
+        !healthQuery.trim() ||
+        (b.healthStatus && b.healthStatus.toLowerCase().includes(healthQuery.toLowerCase())) ||
+        (b.disabilityType && b.disabilityType.toLowerCase().includes(healthQuery.toLowerCase())) ||
+        (b.disabilityDetails && b.disabilityDetails.toLowerCase().includes(healthQuery.toLowerCase()))
 
-    return (
-      matchesSearch &&
-      matchesGov &&
-      matchesDist &&
-      matchesCategory &&
-      matchesPoverty &&
-      matchesSponsorship &&
-      matchesSponsor &&
-      matchesEducation &&
-      matchesGender &&
-      matchesDisability &&
-      matchesHealth
-    )
-  })
+      return (
+        matchesSearch &&
+        matchesGov &&
+        matchesDist &&
+        matchesCategory &&
+        matchesPoverty &&
+        matchesSponsorship &&
+        matchesSponsor &&
+        matchesEducation &&
+        matchesGender &&
+        matchesDisability &&
+        matchesHealth
+      )
+    })
+  }, [
+    initialBeneficiaries,
+    searchTerm,
+    govId,
+    distId,
+    category,
+    povertyLevel,
+    sponsorshipStatus,
+    sponsorId,
+    educationalStage,
+    gender,
+    disability,
+    healthQuery,
+  ])
 
   // Summary Metrics
   const totalCount = filteredBeneficiaries.length
@@ -136,6 +173,13 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
     0
   )
   const avgVulnerability = totalCount > 0 ? Math.round(totalVulnerability / totalCount) : 0
+
+  // Paginated records for screen display
+  const totalPages = Math.ceil(totalCount / pageSize) || 1
+  const paginatedBeneficiaries = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredBeneficiaries.slice(start, start + pageSize)
+  }, [filteredBeneficiaries, currentPage, pageSize])
 
   // Excel Export Handler
   const handleExportExcel = () => {
@@ -165,13 +209,13 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
   const getPovertyBadge = (level: string | null) => {
     switch (level) {
       case "SEVERE":
-        return <Badge className="bg-red-950/40 text-red-400 hover:bg-red-950/40 border border-red-900/50 font-bold">شديد</Badge>
+        return <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/30 font-bold">شديد</Badge>
       case "MEDIUM":
-        return <Badge className="bg-amber-950/40 text-amber-400 hover:bg-amber-950/40 border border-amber-900/50 font-bold">متوسط</Badge>
+        return <Badge className="bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/30 font-bold">متوسط</Badge>
       case "LOW":
-        return <Badge className="bg-emerald-950/40 text-emerald-400 hover:bg-emerald-950/40 border border-emerald-900/50 font-bold">منخفض</Badge>
+        return <Badge className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/30 font-bold">منخفض</Badge>
       default:
-        return <span className="text-slate-500 text-xs italic">-</span>
+        return <span className="text-slate-400 text-xs italic">-</span>
     }
   }
 
@@ -218,6 +262,10 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
             color: black !important;
             font-weight: bold !important;
           }
+          /* Show all rows when printing */
+          .screen-only-pagination {
+            display: none !important;
+          }
         }
       `}</style>
 
@@ -234,10 +282,10 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
       </div>
 
       {/* ── Filter Controls Panel (Hidden on Print) ── */}
-      <Card className="bg-slate-900/40 border border-slate-800/80 backdrop-blur-md rounded-2xl print-hide">
+      <Card className="bg-white dark:bg-slate-900/60 border border-border/60 backdrop-blur-md rounded-2xl print-hide shadow-lg">
         <CardContent className="p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <div className="flex items-center justify-between border-b border-border/40 pb-3">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <SlidersHorizontal className="h-4 w-4 text-emerald-500" />
               مرشحات البحث المتقدمة
             </h3>
@@ -257,7 +305,7 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
                 setSponsorId("ALL")
                 setHealthQuery("")
               }}
-              className="text-xs text-slate-400 hover:text-white transition-colors gap-1.5 hover:bg-slate-800/40"
+              className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-800/40"
             >
               <X className="h-3.5 w-3.5" />
               <span>تهيئة الفلاتر</span>
@@ -272,7 +320,7 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
                 placeholder="البحث باسم المستفيد أو الرقم الوطني أو كود اليتيم..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-9 bg-slate-900/60 border-slate-800/80 text-white placeholder-slate-500 text-sm focus-visible:ring-emerald-500 focus-visible:bg-slate-900/90 focus-visible:border-slate-700 transition-all rounded-xl"
+                className="pr-9 bg-slate-50 dark:bg-slate-950 border-border/70 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus-visible:ring-emerald-500 rounded-xl"
               />
             </div>
 
@@ -280,11 +328,11 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
             <select
               value={govId}
               onChange={(e) => setGovId(e.target.value)}
-              className="flex h-10 w-full rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-200 font-medium transition-all hover:border-slate-700"
+              className="flex h-10 w-full rounded-xl border border-border/70 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-800 dark:text-slate-200 font-medium transition-all"
             >
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="ALL">كل المحافظات</option>
+              <option value="ALL">كل المحافظات</option>
               {geography.map((gov) => (
-                <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" key={gov.id} value={gov.id.toString()}>
+                <option key={gov.id} value={gov.id.toString()}>
                   {gov.nameAr}
                 </option>
               ))}
@@ -295,11 +343,11 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
               value={distId}
               disabled={govId === "ALL"}
               onChange={(e) => setDistId(e.target.value)}
-              className="flex h-10 w-full rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-200 font-medium disabled:opacity-50 transition-all hover:border-slate-700"
+              className="flex h-10 w-full rounded-xl border border-border/70 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-800 dark:text-slate-200 font-medium disabled:opacity-50 transition-all"
             >
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="ALL">كل المديريات</option>
+              <option value="ALL">كل المديريات</option>
               {activeDistricts.map((dist: any) => (
-                <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" key={dist.id} value={dist.id.toString()}>
+                <option key={dist.id} value={dist.id.toString()}>
                   {dist.nameAr}
                 </option>
               ))}
@@ -309,83 +357,83 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="flex h-10 w-full rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-200 font-medium transition-all hover:border-slate-700"
+              className="flex h-10 w-full rounded-xl border border-border/70 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-800 dark:text-slate-200 font-medium transition-all"
             >
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="ALL">كل الفئات</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="ORPHAN">يتيم (Orphan)</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="STUDENT">طالب علم (Student)</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="PATIENT">مريض (Patient)</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="GENERAL">عام</option>
+              <option value="ALL">كل الفئات</option>
+              <option value="ORPHAN">يتيم (Orphan)</option>
+              <option value="STUDENT">طالب علم (Student)</option>
+              <option value="PATIENT">مريض (Patient)</option>
+              <option value="GENERAL">عام</option>
             </select>
 
             {/* Poverty Level */}
             <select
               value={povertyLevel}
               onChange={(e) => setPovertyLevel(e.target.value)}
-              className="flex h-10 w-full rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-200 font-medium transition-all hover:border-slate-700"
+              className="flex h-10 w-full rounded-xl border border-border/70 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-800 dark:text-slate-200 font-medium transition-all"
             >
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="ALL">كل مستويات الفقر</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="SEVERE">فقر شديد</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="MEDIUM">فقر متوسط</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="LOW">فقر منخفض</option>
+              <option value="ALL">كل مستويات الفقر</option>
+              <option value="SEVERE">فقر شديد</option>
+              <option value="MEDIUM">فقر متوسط</option>
+              <option value="LOW">فقر منخفض</option>
             </select>
 
             {/* Sponsorship status */}
             <select
               value={sponsorshipStatus}
               onChange={(e) => setSponsorshipStatus(e.target.value)}
-              className="flex h-10 w-full rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-200 font-medium transition-all hover:border-slate-700"
+              className="flex h-10 w-full rounded-xl border border-border/70 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-800 dark:text-slate-200 font-medium transition-all"
             >
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="ALL">حالة الكفالة (الكل)</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="SPONSORED">مكفول</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="UNSPONSORED">في قائمة الانتظار</option>
+              <option value="ALL">حالة الكفالة (الكل)</option>
+              <option value="SPONSORED">مكفول</option>
+              <option value="UNSPONSORED">في قائمة الانتظار</option>
             </select>
 
             {/* Educational stage */}
             <select
               value={educationalStage}
               onChange={(e) => setEducationalStage(e.target.value)}
-              className="flex h-10 w-full rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-200 font-medium transition-all hover:border-slate-700"
+              className="flex h-10 w-full rounded-xl border border-border/70 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-800 dark:text-slate-200 font-medium transition-all"
             >
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="ALL">المرحلة الدراسية (الكل)</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="الابتدائية">الابتدائية</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="الأساسية">الأساسية / الإعدادية</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="الثانوية">الثانوية</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="الجامعية">الجامعية</option>
+              <option value="ALL">المرحلة الدراسية (الكل)</option>
+              <option value="الابتدائية">الابتدائية</option>
+              <option value="الأساسية">الأساسية / الإعدادية</option>
+              <option value="الثانوية">الثانوية</option>
+              <option value="الجامعية">الجامعية</option>
             </select>
 
             {/* Gender */}
             <select
               value={gender}
               onChange={(e) => setGender(e.target.value)}
-              className="flex h-10 w-full rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-200 font-medium transition-all hover:border-slate-700"
+              className="flex h-10 w-full rounded-xl border border-border/70 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-800 dark:text-slate-200 font-medium transition-all"
             >
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="ALL">الجنس (الكل)</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="MALE">ذكور</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="FEMALE">إناث</option>
+              <option value="ALL">الجنس (الكل)</option>
+              <option value="MALE">ذكور</option>
+              <option value="FEMALE">إناث</option>
             </select>
 
             {/* Disability */}
             <select
               value={disability}
               onChange={(e) => setDisability(e.target.value)}
-              className="flex h-10 w-full rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-200 font-medium transition-all hover:border-slate-700"
+              className="flex h-10 w-full rounded-xl border border-border/70 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-800 dark:text-slate-200 font-medium transition-all"
             >
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="ALL">ذوي الاحتياجات الخاصة (الكل)</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="YES">يعاني من إعاقة</option>
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="NO">لا توجد إعاقات</option>
+              <option value="ALL">ذوي الاحتياجات الخاصة (الكل)</option>
+              <option value="YES">يعاني من إعاقة</option>
+              <option value="NO">لا توجد إعاقات</option>
             </select>
 
             {/* Sponsor Agency */}
             <select
               value={sponsorId}
               onChange={(e) => setSponsorId(e.target.value)}
-              className="flex h-10 w-full rounded-xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-200 font-medium transition-all hover:border-slate-700"
+              className="flex h-10 w-full rounded-xl border border-border/70 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-right text-slate-800 dark:text-slate-200 font-medium transition-all"
             >
-              <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" value="ALL">جهة الكفالة (الكل)</option>
+              <option value="ALL">جهة الكفالة (الكل)</option>
               {sponsors.map((sp: any) => (
-                <option className="bg-white dark:bg-slate-950 text-gray-900 dark:text-white" key={sp.id} value={sp.id}>
-                  {sp.name}
+                <option key={sp.id} value={sp.id}>
+                  {sp.fullName || sp.name || "كافل"}
                 </option>
               ))}
             </select>
@@ -395,7 +443,7 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
               placeholder="البحث بنوع المرض أو الإعاقة..."
               value={healthQuery}
               onChange={(e) => setHealthQuery(e.target.value)}
-              className="bg-slate-900/60 border-slate-800/80 text-white placeholder-slate-500 text-sm focus-visible:ring-emerald-500 focus-visible:bg-slate-900/90 focus-visible:border-slate-700 transition-all rounded-xl"
+              className="bg-slate-50 dark:bg-slate-950 border-border/70 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus-visible:ring-emerald-500 rounded-xl"
             />
           </div>
         </CardContent>
@@ -403,17 +451,17 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
 
       {/* ── Summary Counters & Action Buttons (Hidden on Print) ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print-hide">
-        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-          <Badge className="bg-slate-800/40 text-slate-200 hover:bg-slate-800/60 font-bold py-1.5 px-3 rounded-xl border border-slate-700/50 transition-all">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold py-1.5 px-3 rounded-xl border border-border/60">
             إجمالي المطابقين: {totalCount} مستفيد
           </Badge>
-          <Badge className="bg-emerald-950/40 text-emerald-400 hover:bg-emerald-950/50 font-bold py-1.5 px-3 rounded-xl border border-emerald-900/50 transition-all">
+          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold py-1.5 px-3 rounded-xl border border-emerald-500/20">
             مكفولين: {sponsoredCount}
           </Badge>
-          <Badge className="bg-amber-950/40 text-amber-400 hover:bg-amber-950/50 font-bold py-1.5 px-3 rounded-xl border border-amber-900/50 transition-all">
+          <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold py-1.5 px-3 rounded-xl border border-amber-500/20">
             في الانتظار: {unsponsoredCount}
           </Badge>
-          <Badge className="bg-blue-950/40 text-blue-400 hover:bg-blue-950/50 font-bold py-1.5 px-3 rounded-xl border border-blue-900/50 transition-all">
+          <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold py-1.5 px-3 rounded-xl border border-blue-500/20">
             متوسط الهشاشة: {avgVulnerability}%
           </Badge>
         </div>
@@ -423,17 +471,17 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
           <Button
             onClick={handleExportExcel}
             disabled={totalCount === 0}
-            className="bg-slate-800 hover:bg-slate-700 text-white rounded-xl gap-2 font-semibold border border-slate-700 hover:border-slate-600 transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+            className="bg-slate-800 hover:bg-slate-700 text-white rounded-xl gap-2 font-bold border border-slate-700 transition-all shadow-sm"
           >
             <Download className="h-4 w-4" />
-            <span>تصدير البيانات (Excel)</span>
+            <span>تصدير Excel ({totalCount})</span>
           </Button>
 
           {/* Print PDF */}
           <Button
             onClick={handlePrint}
             disabled={totalCount === 0}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl gap-2 font-semibold shadow-md shadow-emerald-900/30 transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl gap-2 font-bold shadow-md shadow-emerald-900/30 transition-all"
           >
             <Printer className="h-4 w-4" />
             <span>طباعة التقرير (PDF)</span>
@@ -442,56 +490,56 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
       </div>
 
       {/* ── Data Grid Preview ── */}
-      <Card className="bg-slate-900/40 border border-slate-800/80 backdrop-blur-md rounded-2xl overflow-hidden">
+      <Card className="bg-white dark:bg-slate-900/60 border border-border/60 backdrop-blur-md rounded-2xl overflow-hidden shadow-xl">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table className="w-full text-right">
-              <TableHeader className="bg-slate-950 border-b border-slate-800/80">
-                <TableRow className="hover:bg-slate-950 border-0">
-                  <TableHead className="text-right text-slate-200 font-bold py-4 pr-6">اسم المستفيد</TableHead>
-                  <TableHead className="text-right text-slate-200 font-bold py-4">الجنس</TableHead>
-                  <TableHead className="text-right text-slate-200 font-bold py-4">الفئة</TableHead>
-                  <TableHead className="text-right text-slate-200 font-bold py-4">رب الأسرة</TableHead>
-                  <TableHead className="text-right text-slate-200 font-bold py-4">المحافظة والمديرية</TableHead>
-                  <TableHead className="text-right text-slate-200 font-bold py-4">مستوى الفقر</TableHead>
-                  <TableHead className="text-right text-slate-200 font-bold py-4">درجة الهشاشة</TableHead>
-                  <TableHead className="text-center text-slate-200 font-bold py-4 pl-6">حالة الكفالة</TableHead>
+              <TableHeader className="bg-slate-50 dark:bg-slate-950 border-b border-border/70">
+                <TableRow className="border-0">
+                  <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4 pr-6">اسم المستفيد</TableHead>
+                  <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4">الجنس</TableHead>
+                  <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4">الفئة</TableHead>
+                  <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4">رب الأسرة</TableHead>
+                  <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4">المحافظة والمديرية</TableHead>
+                  <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4">مستوى الفقر</TableHead>
+                  <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4">درجة الهشاشة</TableHead>
+                  <TableHead className="text-center text-slate-700 dark:text-slate-200 font-bold py-4 pl-6">حالة الكفالة</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody className="divide-y divide-slate-800/60 text-slate-350">
+              <TableBody className="divide-y divide-border/40">
                 {totalCount > 0 ? (
-                  filteredBeneficiaries.map((b) => {
+                  paginatedBeneficiaries.map((b) => {
                     const addressStr = `${b.family?.subDistrict?.district?.governorate?.nameAr || "-"} / ${b.family?.subDistrict?.district?.nameAr || "-"}`
                     const isSponsored = b.sponsorships && b.sponsorships.length > 0
-                    
+
                     return (
-                      <TableRow key={b.id} className="hover:bg-slate-800/30 transition-colors border-b border-slate-800/50">
+                      <TableRow key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                         {/* Name */}
-                        <td className="py-4 pr-6 font-bold text-white text-sm">
+                        <td className="py-4 pr-6 font-bold text-slate-900 dark:text-white text-sm">
                           {b.fullName}
                         </td>
                         {/* Gender */}
-                        <td className="py-4 text-xs font-semibold text-slate-350">
+                        <td className="py-4 text-xs font-semibold text-slate-600 dark:text-slate-400">
                           {b.gender === "MALE" ? "ذكر" : "أنثى"}
                         </td>
                         {/* Category */}
-                        <td className="py-4 text-xs font-bold text-slate-300">
+                        <td className="py-4 text-xs font-bold">
                           {b.category === "ORPHAN" ? (
-                            <Badge className="bg-blue-950/40 text-blue-400 hover:bg-blue-950/40 border border-blue-900/50 font-semibold">يتيم</Badge>
+                            <Badge className="bg-blue-500/10 text-blue-500 border border-blue-500/30 font-semibold">يتيم</Badge>
                           ) : b.category === "STUDENT" ? (
-                            <Badge className="bg-purple-950/40 text-purple-400 hover:bg-purple-950/40 border border-purple-900/50 font-semibold">طالب علم</Badge>
+                            <Badge className="bg-purple-500/10 text-purple-500 border border-purple-500/30 font-semibold">طالب علم</Badge>
                           ) : b.category === "PATIENT" ? (
-                            <Badge className="bg-rose-950/40 text-rose-400 hover:bg-rose-950/40 border border-rose-900/50 font-semibold">مريض</Badge>
+                            <Badge className="bg-rose-500/10 text-rose-500 border border-rose-500/30 font-semibold">مريض</Badge>
                           ) : (
-                            <Badge className="bg-slate-800/60 text-slate-300 hover:bg-slate-800/60 border border-slate-700/50 font-semibold">عام</Badge>
+                            <Badge className="bg-slate-500/10 text-slate-500 border border-slate-500/30 font-semibold">عام</Badge>
                           )}
                         </td>
                         {/* Family Head */}
-                        <td className="py-4 text-xs font-semibold text-slate-350">
-                          {b.family?.headFullName}
+                        <td className="py-4 text-xs font-semibold text-slate-600 dark:text-slate-400">
+                          {b.family?.headFullName || "—"}
                         </td>
                         {/* Address */}
-                        <td className="py-4 text-xs font-semibold text-slate-350">
+                        <td className="py-4 text-xs font-semibold text-slate-600 dark:text-slate-400">
                           {addressStr}
                         </td>
                         {/* Poverty */}
@@ -499,17 +547,17 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
                           {getPovertyBadge(b.family?.povertyLevel)}
                         </td>
                         {/* Vulnerability Score */}
-                        <td className="py-4 font-mono font-bold text-sm text-slate-200 tabular-nums">
-                          {b.family?.vulnerabilityScore !== null ? `${b.family?.vulnerabilityScore}%` : "0%"}
+                        <td className="py-4 font-mono font-bold text-sm text-slate-800 dark:text-slate-200 tabular-nums">
+                          {b.family?.vulnerabilityScore !== null && b.family?.vulnerabilityScore !== undefined ? `${b.family.vulnerabilityScore}%` : "0%"}
                         </td>
                         {/* Sponsorship Badge */}
                         <td className="py-4 pl-6 text-center">
                           {isSponsored ? (
-                            <Badge className="bg-emerald-950/40 text-emerald-400 border border-emerald-900/50 hover:bg-emerald-950/40 font-bold px-2 py-0.5">
+                            <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold px-2.5 py-0.5">
                               مكفول
                             </Badge>
                           ) : (
-                            <Badge className="bg-slate-800/60 text-slate-400 border border-slate-700/50 hover:bg-slate-800/60 font-bold px-2 py-0.5">
+                            <Badge className="bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/30 font-bold px-2.5 py-0.5">
                               في الانتظار
                             </Badge>
                           )}
@@ -519,7 +567,7 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
                   })
                 ) : (
                   <TableRow>
-                    <td colSpan={8} className="text-center py-12 text-sm text-slate-400 font-medium bg-slate-900/20">
+                    <td colSpan={8} className="text-center py-12 text-sm text-slate-500 font-medium">
                       لا توجد سجلات مستفيدين تطابق خيارات التصفية والبحث المقررة.
                     </td>
                   </TableRow>
@@ -527,6 +575,42 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
               </TableBody>
             </Table>
           </div>
+
+          {/* Screen Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="screen-only-pagination flex items-center justify-between px-6 py-4 bg-slate-50 dark:bg-slate-950 border-t border-border/50 text-xs">
+              <span className="text-slate-500 font-bold">
+                عرض {Math.min(totalCount, (currentPage - 1) * pageSize + 1)} -{" "}
+                {Math.min(totalCount, currentPage * pageSize)} من أصل {totalCount} مستفيد
+              </span>
+
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="rounded-xl h-8 px-3 text-xs"
+                >
+                  <ChevronRight className="h-4 w-4 ml-1" /> السابق
+                </Button>
+
+                <span className="px-2 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  {currentPage} / {totalPages}
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="rounded-xl h-8 px-3 text-xs"
+                >
+                  التالي <ChevronLeft className="h-4 w-4 mr-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
