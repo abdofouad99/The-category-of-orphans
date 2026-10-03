@@ -10,10 +10,17 @@ export interface TargetFilterCriteria {
   districtId?: string
   subDistrictId?: string
   limit?: number
-  excludeAidedDays?: number
+  excludeAidedDays?: number  // exclude families that received aid in the last N days
   hasOrphansOnly?: boolean
   hasWidowsOnly?: boolean
   hasDisabledOnly?: boolean
+  hasDisplacedOnly?: boolean
+  hasUnemployedOnly?: boolean
+  hasElderlyOnly?: boolean
+  hasKidsUnder5Only?: boolean
+  hasLargeFamilyOnly?: boolean
+  noAidBefore?: boolean       // never received aid
+  hasDivorcedOnly?: boolean   // socialStatus includes مطلق
 }
 
 export async function filterBeneficiariesForTargeting(criteria: TargetFilterCriteria) {
@@ -23,6 +30,7 @@ export async function filterBeneficiariesForTargeting(criteria: TargetFilterCrit
       isActive: true,
     }
 
+    // --- Geography cascade ---
     if (criteria.subDistrictId) {
       where.subDistrictId = parseInt(criteria.subDistrictId)
     } else if (criteria.districtId) {
@@ -31,6 +39,7 @@ export async function filterBeneficiariesForTargeting(criteria: TargetFilterCrit
       where.subDistrict = { district: { governorateId: parseInt(criteria.governorateId) } }
     }
 
+    // --- Vulnerability filters (AND logic — all must be true) ---
     if (criteria.hasOrphansOnly) {
       where.OR = [{ hasOrphans: true }, { orphansCount: { gt: 0 } }]
     }
@@ -39,6 +48,50 @@ export async function filterBeneficiariesForTargeting(criteria: TargetFilterCrit
     }
     if (criteria.hasDisabledOnly) {
       where.specialNeedsCount = { gt: 0 }
+    }
+    if (criteria.hasDisplacedOnly) {
+      where.isDisplaced = true
+    }
+    if (criteria.hasUnemployedOnly) {
+      where.hasUnemployed = true
+    }
+    if (criteria.hasElderlyOnly) {
+      where.elderlyAbove60Count = { gt: 0 }
+    }
+    if (criteria.hasKidsUnder5Only) {
+      where.kidsUnder5Count = { gt: 0 }
+    }
+    if (criteria.hasLargeFamilyOnly) {
+      // Large family = 6+ members
+      where.manualMembersCount = { gte: 6 }
+    }
+    if (criteria.noAidBefore) {
+      where.receivedAidBefore = { not: true }
+    }
+    if (criteria.hasDivorcedOnly) {
+      where.socialStatus = { contains: "مطلق", mode: "insensitive" }
+    }
+
+    // --- Exclude families that received aid in the last N days ---
+    let excludedFamilyIds: Set<string> = new Set()
+    if (criteria.excludeAidedDays && criteria.excludeAidedDays > 0) {
+      const cutoffDate = new Date()
+      cutoffDate.setDate(cutoffDate.getDate() - criteria.excludeAidedDays)
+
+      // Find families that had aid delivered recently via ProjectBeneficiary
+      const recentAid = await prisma.projectBeneficiary.findMany({
+        where: {
+          isDelivered: true,
+          createdAt: { gte: cutoffDate },
+          beneficiary: { deletedAt: null },
+        },
+        select: { beneficiary: { select: { familyId: true } } },
+      })
+      for (const rec of recentAid) {
+        if (rec.beneficiary?.familyId) {
+          excludedFamilyIds.add(rec.beneficiary.familyId)
+        }
+      }
     }
 
     const families = await prisma.family.findMany({
@@ -57,6 +110,7 @@ export async function filterBeneficiariesForTargeting(criteria: TargetFilterCrit
 
     // Score each family
     const scored = families
+      .filter(fam => !excludedFamilyIds.has(fam.id))
       .map(fam => {
         const scoreRes = calculateFamilyNeedScore({
           manualMembersCount: fam.manualMembersCount,
@@ -85,14 +139,15 @@ export async function filterBeneficiariesForTargeting(criteria: TargetFilterCrit
     // Sort by highest need score
     scored.sort((a, b) => b.needScore - a.needScore)
 
+    const totalMatched = scored.length
     const finalResults = criteria.limit && criteria.limit > 0
       ? scored.slice(0, criteria.limit)
       : scored
 
     return {
       success: true,
-      totalMatched: scored.length,
-      results: finalResults,
+      totalMatched,
+      results: JSON.parse(JSON.stringify(finalResults)),
     }
   } catch (error: any) {
     console.error("filterBeneficiariesForTargeting error:", error)
@@ -110,9 +165,9 @@ export async function createDistributionFromTargeting(
       return { success: false, error: "بيانات المشروع أو المستفيدين غير مكتملة" }
     }
 
-    // Get a system user for audit (first admin)
+    // Get a system user for audit (admin or manager)
     const systemUser = await prisma.user.findFirst({
-      where: { role: "ADMIN" },
+      where: { role: { in: ["ADMIN", "MANAGER"] } },
       select: { id: true },
     })
     if (!systemUser) return { success: false, error: "لا يوجد مستخدم مدير في النظام" }

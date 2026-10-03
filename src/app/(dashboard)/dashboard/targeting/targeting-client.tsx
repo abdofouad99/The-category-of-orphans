@@ -5,16 +5,13 @@ import {
   Target,
   Filter,
   CheckCircle2,
-  AlertCircle,
   Download,
-  Send,
   Loader2,
-  Users,
-  Building2,
-  Award,
   Sparkles,
-  Layers,
   PackageOpen,
+  MapPin,
+  Users,
+  TrendingUp,
 } from "lucide-react"
 import { NeedScoreBadge } from "@/components/ui/need-score-badge"
 import { filterBeneficiariesForTargeting, createDistributionFromTargeting } from "@/app/actions/targeting-actions"
@@ -39,7 +36,6 @@ export function TargetingClient({ geography }: GeographyProps) {
 
   // Exclude Checkboxes State
   const [excludeDaysCheck, setExcludeDaysCheck] = useState(false)
-  const [excludeDuplicatesCheck, setExcludeDuplicatesCheck] = useState(true)
   const [excludeSponsoredCheck, setExcludeSponsoredCheck] = useState(false)
 
   // Results State
@@ -54,17 +50,17 @@ export function TargetingClient({ geography }: GeographyProps) {
 
   // Vulnerability Chips List
   const vulnerabilityChips = [
-    { id: "orphans", label: "أيتام" },
-    { id: "widows", label: "أرامل" },
-    { id: "displaced", label: "نازحون" },
-    { id: "disabled", label: "ذوو إعاقة/مرض مزمن" },
-    { id: "poor_house", label: "سكن متهالك" },
-    { id: "unemployed", label: "بلا عمل" },
-    { id: "elderly", label: "كبار سن" },
-    { id: "under5", label: "أطفال دون 5 سنوات" },
-    { id: "large_family", label: "أسرة كبيرة" },
-    { id: "no_aid", label: "لم تُساعد سابقاً" },
-    { id: "divorced", label: "مطلقات/مطلقون" },
+    { id: "orphans",      label: "أيتام" },
+    { id: "widows",       label: "أرامل" },
+    { id: "displaced",    label: "نازحون" },
+    { id: "disabled",     label: "ذوو إعاقة/مرض مزمن" },
+    { id: "unemployed",   label: "بلا عمل" },
+    { id: "elderly",      label: "كبار سن" },
+    { id: "under5",       label: "أطفال دون 5 سنوات" },
+    { id: "large_family", label: "أسرة كبيرة (6+)" },
+    { id: "no_aid",       label: "لم تُساعد سابقاً" },
+    { id: "divorced",     label: "مطلقات/مطلقون" },
+    { id: "poor_house",   label: "سكن متهالك" },
   ]
 
   const toggleTagFilter = (tagId: string) => {
@@ -82,28 +78,37 @@ export function TargetingClient({ geography }: GeographyProps) {
     startTransition(async () => {
       const res = await filterBeneficiariesForTargeting({
         minNeedScore,
-        governorateId: selectedGov,
-        districtId: selectedDist,
-        subDistrictId: selectedSubDist,
+        governorateId: selectedGov || undefined,
+        districtId: selectedDist || undefined,
+        subDistrictId: selectedSubDist || undefined,
         limit: limitCount ? parseInt(limitCount) : undefined,
         excludeAidedDays: excludeDaysCheck ? 90 : undefined,
-        hasOrphansOnly: selectedTags.includes("orphans"),
-        hasWidowsOnly: selectedTags.includes("widows"),
-        hasDisabledOnly: selectedTags.includes("disabled"),
+        hasOrphansOnly:     selectedTags.includes("orphans"),
+        hasWidowsOnly:      selectedTags.includes("widows"),
+        hasDisabledOnly:    selectedTags.includes("disabled"),
+        hasDisplacedOnly:   selectedTags.includes("displaced"),
+        hasUnemployedOnly:  selectedTags.includes("unemployed"),
+        hasElderlyOnly:     selectedTags.includes("elderly"),
+        hasKidsUnder5Only:  selectedTags.includes("under5"),
+        hasLargeFamilyOnly: selectedTags.includes("large_family"),
+        noAidBefore:        selectedTags.includes("no_aid"),
+        hasDivorcedOnly:    selectedTags.includes("divorced"),
       })
 
       if (res.success) {
         let filteredRes = res.results
 
-        // Apply Extra Client Exclusion logic if checked
+        // Exclude sponsored families (those with active orphan sponsorships)
         if (excludeSponsoredCheck) {
-          filteredRes = filteredRes.filter(r => !r.family.hasOrphans)
+          filteredRes = filteredRes.filter((r: any) => !r.family.hasOrphans || r.family.orphansCount === 0)
         }
 
         setResults(filteredRes)
-        setTotalMatched(filteredRes.length)
+        setTotalMatched(res.totalMatched ?? filteredRes.length)
       } else {
         setError(res.error || "فشل جلب الأسر المستحقة")
+        setResults([])
+        setTotalMatched(0)
       }
     })
   }
@@ -111,7 +116,7 @@ export function TargetingClient({ geography }: GeographyProps) {
   function handleExportExcel() {
     if (results.length === 0) return
 
-    const dataToExport = results.map((item, idx) => ({
+    const dataToExport = results.map((item: any, idx: number) => ({
       "#": idx + 1,
       "كود الأسرة": `YT-2026-${item.family.id.slice(-4).toUpperCase()}`,
       "اسم رب الأسرة": item.family.headFullName,
@@ -137,7 +142,7 @@ export function TargetingClient({ geography }: GeographyProps) {
     if (results.length === 0) return
 
     setIsCreatingProject(true)
-    const familyIds = results.map(r => r.family.id)
+    const familyIds = results.map((r: any) => r.family.id)
 
     const res = await createDistributionFromTargeting(finalName, interventionType, familyIds)
     setIsCreatingProject(false)
@@ -171,6 +176,22 @@ export function TargetingClient({ geography }: GeographyProps) {
             </p>
           </div>
         </div>
+
+        {/* Stats chips — shown after search */}
+        {hasSearched && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-1.5">
+              <Users className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="text-xs font-bold text-emerald-400">{results.length} معروضة</span>
+            </div>
+            {totalMatched > results.length && (
+              <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-1.5">
+                <TrendingUp className="h-3.5 w-3.5 text-amber-400" />
+                <span className="text-xs font-bold text-amber-400">{totalMatched} إجمالي مطابق</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Main Split Grid */}
@@ -192,7 +213,7 @@ export function TargetingClient({ geography }: GeographyProps) {
                 placeholder="مثال: سلة غذائية — رمضان 1448"
                 value={projectNameInput}
                 onChange={e => setProjectNameInput(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-slate-950 border border-emerald-500/30 text-gray-900 dark:text-white text-right rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-500 placeholder-slate-500"
+                className="w-full bg-white dark:bg-slate-950 border border-emerald-500/30 text-gray-900 dark:text-white text-right rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-500 placeholder-slate-500"
               />
             </div>
 
@@ -201,7 +222,7 @@ export function TargetingClient({ geography }: GeographyProps) {
               <select
                 value={interventionType}
                 onChange={e => setInterventionType(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-slate-950 border border-emerald-500/30 text-gray-900 dark:text-white text-right rounded-xl px-3 py-2 text-xs font-bold cursor-pointer"
+                className="w-full bg-white dark:bg-slate-950 border border-emerald-500/30 text-gray-900 dark:text-white text-right rounded-xl px-3 py-2 text-xs font-bold cursor-pointer"
               >
                 <option value="سلة غذائية">سلة غذائية</option>
                 <option value="مساعدة نقدية">مساعدة نقدية</option>
@@ -216,7 +237,7 @@ export function TargetingClient({ geography }: GeographyProps) {
           </div>
 
           {/* Need Score Slider */}
-          <div className="space-y-2 bg-gray-50 dark:bg-slate-950 p-3.5 rounded-xl border border-emerald-500/20">
+          <div className="space-y-2 bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-emerald-500/20">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-gray-600 dark:text-slate-300">الحد الأدنى لدرجة الأولوية:</label>
               <span className="text-xs font-extrabold text-emerald-400 font-mono bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
@@ -230,7 +251,7 @@ export function TargetingClient({ geography }: GeographyProps) {
               step={5}
               value={minNeedScore}
               onChange={e => setMinNeedScore(parseInt(e.target.value))}
-              className="w-full accent-emerald-500 bg-gray-200 dark:bg-slate-800 cursor-pointer h-2 rounded-lg"
+              className="w-full accent-emerald-500 cursor-pointer h-2 rounded-lg"
             />
             <div className="flex justify-between text-[10px] text-gray-500 dark:text-slate-400 font-semibold px-1">
               <span>0 (الكل)</span>
@@ -240,27 +261,55 @@ export function TargetingClient({ geography }: GeographyProps) {
             </div>
           </div>
 
-          {/* Geography Cascade */}
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-bold text-gray-600 dark:text-slate-300 block mb-1">المديرية</label>
-              <select
-                value={selectedGov}
-                onChange={e => {
-                  setSelectedGov(e.target.value)
-                  setSelectedDist("")
-                  setSelectedSubDist("")
-                }}
-                className="w-full bg-gray-50 dark:bg-slate-950 border border-emerald-500/30 text-gray-900 dark:text-white text-right rounded-xl px-3 py-2 text-xs font-bold cursor-pointer"
-              >
-                <option value="">كل المديريات والمحافظات</option>
-                {geography.map((g: any) => (
-                  <option key={g.id} value={g.id.toString()}>
-                    {g.nameAr}
-                  </option>
-                ))}
-              </select>
+          {/* Geography Cascade — 3 levels */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-slate-300 mb-1">
+              <MapPin className="h-3.5 w-3.5 text-emerald-400" /> الموقع الجغرافي
             </div>
+            {/* Governorate */}
+            <select
+              value={selectedGov}
+              onChange={e => {
+                setSelectedGov(e.target.value)
+                setSelectedDist("")
+                setSelectedSubDist("")
+              }}
+              className="w-full bg-white dark:bg-slate-950 border border-emerald-500/30 text-gray-900 dark:text-white text-right rounded-xl px-3 py-2 text-xs font-bold cursor-pointer"
+            >
+              <option value="">كل المحافظات</option>
+              {geography.map((g: any) => (
+                <option key={g.id} value={g.id.toString()}>{g.nameAr}</option>
+              ))}
+            </select>
+
+            {/* District */}
+            <select
+              value={selectedDist}
+              onChange={e => {
+                setSelectedDist(e.target.value)
+                setSelectedSubDist("")
+              }}
+              disabled={!selectedGov || districts.length === 0}
+              className="w-full bg-white dark:bg-slate-950 border border-emerald-500/30 text-gray-900 dark:text-white text-right rounded-xl px-3 py-2 text-xs font-bold cursor-pointer disabled:opacity-40"
+            >
+              <option value="">كل المديريات</option>
+              {districts.map((d: any) => (
+                <option key={d.id} value={d.id.toString()}>{d.nameAr}</option>
+              ))}
+            </select>
+
+            {/* SubDistrict */}
+            <select
+              value={selectedSubDist}
+              onChange={e => setSelectedSubDist(e.target.value)}
+              disabled={!selectedDist || subDistricts.length === 0}
+              className="w-full bg-white dark:bg-slate-950 border border-emerald-500/30 text-gray-900 dark:text-white text-right rounded-xl px-3 py-2 text-xs font-bold cursor-pointer disabled:opacity-40"
+            >
+              <option value="">كل العزل</option>
+              {subDistricts.map((s: any) => (
+                <option key={s.id} value={s.id.toString()}>{s.nameAr}</option>
+              ))}
+            </select>
           </div>
 
           {/* Limit Count */}
@@ -271,13 +320,13 @@ export function TargetingClient({ geography }: GeographyProps) {
               value={limitCount}
               onChange={e => setLimitCount(e.target.value)}
               placeholder="اتركه فارغاً لغير محدود"
-              className="w-full bg-gray-50 dark:bg-slate-950 border border-emerald-500/30 text-gray-900 dark:text-white text-right rounded-xl px-3 py-2 text-xs placeholder-slate-500 font-mono"
+              className="w-full bg-white dark:bg-slate-950 border border-emerald-500/30 text-gray-900 dark:text-white text-right rounded-xl px-3 py-2 text-xs placeholder-slate-500 font-mono"
             />
           </div>
 
           {/* Special Categories Tag Chips */}
           <div className="space-y-2 border-t border-border/40 pt-3">
-            <label className="text-xs font-bold text-gray-600 dark:text-slate-300 block">اشتراط فئات (يجب توفّرها جميعاً):</label>
+            <label className="text-xs font-bold text-gray-600 dark:text-slate-300 block">اشتراط فئات هشة (يجب توفّرها):</label>
             <div className="flex flex-wrap gap-1.5">
               {vulnerabilityChips.map((chip) => {
                 const active = selectedTags.includes(chip.id)
@@ -289,7 +338,7 @@ export function TargetingClient({ geography }: GeographyProps) {
                     className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all border ${
                       active
                         ? "bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20 scale-105"
-                        : "bg-gray-50 dark:bg-slate-950 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-border/60 hover:border-emerald-500/40"
+                        : "bg-white dark:bg-slate-950 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-border/60 hover:border-emerald-500/40"
                     }`}
                   >
                     {chip.label}
@@ -306,7 +355,7 @@ export function TargetingClient({ geography }: GeographyProps) {
                 type="checkbox"
                 checked={excludeDaysCheck}
                 onChange={e => setExcludeDaysCheck(e.target.checked)}
-                className="rounded border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 text-emerald-500 focus:ring-emerald-500 h-4 w-4"
+                className="rounded border-gray-300 dark:border-slate-700 text-emerald-500 focus:ring-emerald-500 h-4 w-4"
               />
               <span>استبعاد من استلم مساعدة خلال آخر 90 يوماً</span>
             </label>
@@ -314,21 +363,11 @@ export function TargetingClient({ geography }: GeographyProps) {
             <label className="flex items-center gap-2 text-gray-600 dark:text-slate-300 cursor-pointer">
               <input
                 type="checkbox"
-                checked={excludeDuplicatesCheck}
-                onChange={e => setExcludeDuplicatesCheck(e.target.checked)}
-                className="rounded border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 text-emerald-500 focus:ring-emerald-500 h-4 w-4"
-              />
-              <span>استبعاد السجلات المكرّرة المشتبه بها</span>
-            </label>
-
-            <label className="flex items-center gap-2 text-gray-600 dark:text-slate-300 cursor-pointer">
-              <input
-                type="checkbox"
                 checked={excludeSponsoredCheck}
                 onChange={e => setExcludeSponsoredCheck(e.target.checked)}
-                className="rounded border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 text-emerald-500 focus:ring-emerald-500 h-4 w-4"
+                className="rounded border-gray-300 dark:border-slate-700 text-emerald-500 focus:ring-emerald-500 h-4 w-4"
               />
-              <span>استبعاد الأسر المكفولة أصلاً من جهة مانحة</span>
+              <span>استبعاد الأسر المكفولة أصلاً (لديها أيتام مكفولون)</span>
             </label>
           </div>
 
@@ -361,7 +400,11 @@ export function TargetingClient({ geography }: GeographyProps) {
                     الأسر المطابقة
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                    {hasSearched ? `تم العثور على (${results.length}) أسرة مستحقة للتدخل` : "لم تُطبَّق معايير بعد"}
+                    {hasSearched
+                      ? totalMatched > results.length
+                        ? `تم العثور على (${totalMatched}) أسرة — يُعرض منها (${results.length}) حسب الحد الأقصى`
+                        : `تم العثور على (${results.length}) أسرة مستحقة للتدخل`
+                      : "لم تُطبَّق معايير بعد"}
                   </p>
                 </div>
 
@@ -385,6 +428,13 @@ export function TargetingClient({ geography }: GeographyProps) {
                 </div>
               </div>
 
+              {/* Error */}
+              {error && (
+                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 font-semibold">
+                  ⚠️ {error}
+                </div>
+              )}
+
               {/* Table of Matched Results */}
               {results.length > 0 ? (
                 <div className="mt-4 overflow-x-auto">
@@ -395,22 +445,23 @@ export function TargetingClient({ geography }: GeographyProps) {
                         <th className="py-3 px-3">كود الأسرة</th>
                         <th className="py-3 px-3">رب الأسرة</th>
                         <th className="py-3 px-3">الرقم الوطني</th>
-                        <th className="py-3 px-3">الموقع الجغرافي</th>
+                        <th className="py-3 px-3">الموقع</th>
                         <th className="py-3 px-3 text-center">الأفراد</th>
                         <th className="py-3 px-3 text-center">درجة الاحتياج</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/30 text-gray-600 dark:text-slate-300">
-                      {results.map((r, i) => (
+                      {results.map((r: any, i: number) => (
                         <tr key={r.family.id} className="hover:bg-gray-100 dark:hover:bg-slate-950/60 transition-colors">
                           <td className="py-3 px-3 font-mono font-bold text-gray-500 dark:text-slate-400">{i + 1}</td>
                           <td className="py-3 px-3 font-mono font-bold text-emerald-400">
                             YT-2026-{r.family.id.slice(-4).toUpperCase()}
                           </td>
                           <td className="py-3 px-3 font-bold text-gray-900 dark:text-white">{r.family.headFullName}</td>
-                          <td className="py-3 px-3 font-mono">{r.family.headNationalId}</td>
-                          <td className="py-3 px-3 text-gray-500 dark:text-slate-400">
-                            {r.family.subDistrict?.district?.governorate?.nameAr} - {r.family.subDistrict?.district?.nameAr}
+                          <td className="py-3 px-3 font-mono text-xs">{r.family.headNationalId}</td>
+                          <td className="py-3 px-3 text-gray-500 dark:text-slate-400 text-xs">
+                            {r.family.subDistrict?.district?.governorate?.nameAr || "—"}
+                            {r.family.subDistrict?.district?.nameAr ? ` - ${r.family.subDistrict.district.nameAr}` : ""}
                           </td>
                           <td className="py-3 px-3 text-center font-bold text-gray-900 dark:text-white tabular-nums">
                             {r.family.manualMembersCount || r.family.familyMembersCount || 1}
@@ -428,9 +479,13 @@ export function TargetingClient({ geography }: GeographyProps) {
                   <div className="p-4 rounded-full bg-gray-100 dark:bg-slate-950 border border-border/40 text-gray-400 dark:text-slate-500">
                     <Target className="h-8 w-8" />
                   </div>
-                  <p className="text-sm font-bold text-gray-600 dark:text-slate-300">لم تُطبَّق معايير بعد</p>
+                  <p className="text-sm font-bold text-gray-600 dark:text-slate-300">
+                    {hasSearched && !error ? "لا توجد أسر مطابقة للمعايير المحددة" : "لم تُطبَّق معايير بعد"}
+                  </p>
                   <p className="text-xs text-gray-400 dark:text-slate-500 max-w-xs">
-                    حدّد شروط الاستحقاق ونوع التدخل في اللوحة اليمنى ثم انقر على "تطبيق المعايير" لعرض الكشف.
+                    {hasSearched && !error
+                      ? "جرّب تخفيض درجة الاحتياج أو توسيع نطاق الاستهداف"
+                      : "حدّد شروط الاستحقاق ونوع التدخل في اللوحة اليمنى ثم انقر على \"تطبيق المعايير\""}
                   </p>
                 </div>
               )}
