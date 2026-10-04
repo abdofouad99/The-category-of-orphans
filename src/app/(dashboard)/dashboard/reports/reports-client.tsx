@@ -47,7 +47,7 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
 
   // Pagination for screen preview
   const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 50
+  const [pageSize, setPageSize] = useState<number>(50)
 
   // Cascading districts list
   const activeGov = geography.find((g) => g.id.toString() === govId)
@@ -175,8 +175,9 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
   const avgVulnerability = totalCount > 0 ? Math.round(totalVulnerability / totalCount) : 0
 
   // Paginated records for screen display
-  const totalPages = Math.ceil(totalCount / pageSize) || 1
+  const totalPages = pageSize > 0 ? Math.ceil(totalCount / pageSize) || 1 : 1
   const paginatedBeneficiaries = useMemo(() => {
+    if (pageSize <= 0) return filteredBeneficiaries
     const start = (currentPage - 1) * pageSize
     return filteredBeneficiaries.slice(start, start + pageSize)
   }, [filteredBeneficiaries, currentPage, pageSize])
@@ -272,7 +273,9 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
       {/* ── Official Document Header for Print (Hidden on screen) ── */}
       <div className="hidden print-header text-center space-y-2">
         <h1 className="text-xl font-bold text-gray-800">التقرير الرسمي للمستفيدين والأسر الراعية</h1>
-        <p className="text-xs text-gray-500">صادر عن نظام إدارة المنظمة - تاريخ التقرير: {new Date().toLocaleDateString("ar-YE-u-nu-latn")}</p>
+        <p className="text-xs text-gray-500" suppressHydrationWarning>
+          صادر عن نظام إدارة المنظمة - تاريخ التقرير: {new Date().toLocaleDateString("ar-YE-u-nu-latn")}
+        </p>
         <div className="grid grid-cols-4 gap-4 w-full max-w-xl mx-auto text-xs border border-gray-200 p-2 rounded-lg bg-gray-50/50 mt-4">
           <div>إجمالي الحالات: <span className="font-bold">{totalCount}</span></div>
           <div>متوسط الهشاشة: <span className="font-bold">{avgVulnerability}%</span></div>
@@ -496,7 +499,8 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
             <Table className="w-full text-right">
               <TableHeader className="bg-slate-50 dark:bg-slate-950 border-b border-border/70">
                 <TableRow className="border-0">
-                  <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4 pr-6">اسم المستفيد</TableHead>
+                  <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4 pr-6 w-12">#</TableHead>
+                  <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4">اسم المستفيد</TableHead>
                   <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4">الجنس</TableHead>
                   <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4">الفئة</TableHead>
                   <TableHead className="text-right text-slate-700 dark:text-slate-200 font-bold py-4">رب الأسرة</TableHead>
@@ -508,15 +512,24 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
               </TableHeader>
               <TableBody className="divide-y divide-border/40">
                 {totalCount > 0 ? (
-                  paginatedBeneficiaries.map((b) => {
+                  paginatedBeneficiaries.map((b, index) => {
                     const addressStr = `${b.family?.subDistrict?.district?.governorate?.nameAr || "-"} / ${b.family?.subDistrict?.district?.nameAr || "-"}`
                     const isSponsored = b.sponsorships && b.sponsorships.length > 0
 
                     return (
                       <TableRow key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                        {/* Name */}
-                        <td className="py-4 pr-6 font-bold text-slate-900 dark:text-white text-sm">
-                          {b.fullName}
+                        {/* Serial # */}
+                        <td className="py-4 pr-6 font-mono text-xs text-slate-500 font-bold">
+                          {pageSize > 0 ? (currentPage - 1) * pageSize + index + 1 : index + 1}
+                        </td>
+                        {/* Name & Code */}
+                        <td className="py-4 font-bold text-slate-900 dark:text-white text-sm">
+                          <div>{b.fullName}</div>
+                          {(b.orphanCode || b.nationalId) && (
+                            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 font-normal mt-0.5">
+                              {b.orphanCode ? b.orphanCode : `هوية: ${b.nationalId}`}
+                            </div>
+                          )}
                         </td>
                         {/* Gender */}
                         <td className="py-4 text-xs font-semibold text-slate-600 dark:text-slate-400">
@@ -567,7 +580,7 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
                   })
                 ) : (
                   <TableRow>
-                    <td colSpan={8} className="text-center py-12 text-sm text-slate-500 font-medium">
+                    <td colSpan={9} className="text-center py-12 text-sm text-slate-500 font-medium">
                       لا توجد سجلات مستفيدين تطابق خيارات التصفية والبحث المقررة.
                     </td>
                   </TableRow>
@@ -577,38 +590,65 @@ export function ReportsClient({ initialBeneficiaries, geography, sponsors }: Rep
           </div>
 
           {/* Screen Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="screen-only-pagination flex items-center justify-between px-6 py-4 bg-slate-50 dark:bg-slate-950 border-t border-border/50 text-xs">
-              <span className="text-slate-500 font-bold">
-                عرض {Math.min(totalCount, (currentPage - 1) * pageSize + 1)} -{" "}
-                {Math.min(totalCount, currentPage * pageSize)} من أصل {totalCount} مستفيد
-              </span>
-
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="rounded-xl h-8 px-3 text-xs"
-                >
-                  <ChevronRight className="h-4 w-4 ml-1" /> السابق
-                </Button>
-
-                <span className="px-2 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                  {currentPage} / {totalPages}
+          {totalCount > 0 && (
+            <div className="screen-only-pagination flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-950 border-t border-border/50 text-xs">
+              <div className="flex items-center gap-3">
+                <span className="text-slate-500 font-bold">
+                  {pageSize > 0 ? (
+                    <>
+                      عرض {Math.min(totalCount, (currentPage - 1) * pageSize + 1)} -{" "}
+                      {Math.min(totalCount, currentPage * pageSize)} من أصل {totalCount} مستفيد
+                    </>
+                  ) : (
+                    <>عرض جميع السجلات: {totalCount} مستفيد</>
+                  )}
                 </span>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="rounded-xl h-8 px-3 text-xs"
-                >
-                  التالي <ChevronLeft className="h-4 w-4 mr-1" />
-                </Button>
+                <div className="flex items-center gap-1.5 text-slate-500">
+                  <span>لكل صفحة:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value))
+                      setCurrentPage(1)
+                    }}
+                    className="h-8 rounded-lg border border-border/70 bg-white dark:bg-slate-900 px-2 text-xs font-bold text-slate-800 dark:text-slate-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500"
+                  >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={0}>الكل ({totalCount})</option>
+                  </select>
+                </div>
               </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="rounded-xl h-8 px-3 text-xs"
+                  >
+                    <ChevronRight className="h-4 w-4 ml-1" /> السابق
+                  </Button>
+
+                  <span className="px-2 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    {currentPage} / {totalPages}
+                  </span>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="rounded-xl h-8 px-3 text-xs"
+                  >
+                    التالي <ChevronLeft className="h-4 w-4 mr-1" />
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
