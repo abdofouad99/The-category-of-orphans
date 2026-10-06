@@ -156,3 +156,48 @@ export async function purgeRecord(entityType: string, entityId: string) {
     return { success: false, error: error.message }
   }
 }
+
+export async function restoreAllRecords(entityType: string) {
+  try {
+    switch (entityType) {
+      case "FAMILY":
+        await prisma.family.updateMany({
+          where: { NOT: { deletedAt: null } },
+          data: { deletedAt: null, isActive: true },
+        })
+        break
+      case "BENEFICIARY":
+        await prisma.beneficiary.updateMany({
+          where: { NOT: { deletedAt: null } },
+          data: { deletedAt: null, isActive: true },
+        })
+        break
+      case "SPONSOR":
+        await prisma.sponsor.updateMany({
+          where: { NOT: { deletedAt: null } },
+          data: { deletedAt: null },
+        })
+        break
+      case "SPONSORSHIP":
+        await prisma.sponsorship.updateMany({
+          where: { NOT: { deletedAt: null } },
+          data: { deletedAt: null, status: "ACTIVE" },
+        })
+        break
+      case "PROJECT":
+        await prisma.project.updateMany({
+          where: { NOT: { deletedAt: null } },
+          data: { deletedAt: null, status: "ACTIVE" },
+        })
+        break
+    }
+    revalidatePath("/dashboard/trash")
+    revalidatePath("/dashboard/families")
+    revalidatePath("/dashboard/orphans")
+    revalidatePath("/dashboard/sponsors")
+    revalidatePath("/dashboard/projects")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
