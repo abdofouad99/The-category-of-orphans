@@ -242,13 +242,13 @@ export function MyActivityClient({
                 {(currentUser.name || "م").charAt(0)}
               </div>
               <div>
-                <p className="font-extrabold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                <div className="font-extrabold text-sm text-gray-900 dark:text-white flex items-center gap-2">
                   {currentUser.name || "المستخدم"}
                   <Badge className="bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 border border-purple-200 text-[10px] font-bold">
                     <Shield className="h-3 w-3 ml-1" />
                     {currentUser.role}
                   </Badge>
-                </p>
+                </div>
                 <p className="text-xs text-gray-500 dark:text-slate-400 font-mono mt-0.5">{currentUser.email}</p>
               </div>
             </div>
