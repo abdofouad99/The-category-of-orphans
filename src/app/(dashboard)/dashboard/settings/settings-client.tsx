@@ -6,6 +6,9 @@ import {
   createGovernorate,
   createDistrict,
   createSubDistrict,
+  updateGovernorate,
+  updateDistrict,
+  updateSubDistrict,
   deleteGovernorate,
   deleteDistrict,
   deleteSubDistrict,
@@ -14,17 +17,24 @@ import {
   createSystemUser,
   toggleUserStatus,
   deleteUser,
-  updateUserRole,
+  updateSystemUser,
   updateCurrentUserProfile,
   changeCurrentUserPassword,
 } from "@/app/actions/settings-actions"
-import { getAllTagsAdmin, createTag, toggleTag, deleteTag, seedInitialTags } from "@/app/actions/tag-actions"
+import { getAllTagsAdmin, createTag, updateTag, toggleTag, deleteTag, seedInitialTags } from "@/app/actions/tag-actions"
 import { TagCategory, Role } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import {
   User,
   Settings,
@@ -57,6 +67,8 @@ import {
   Shield,
   UserCheck,
   AlertTriangle,
+  X,
+  Filter,
 } from "lucide-react"
 
 interface SettingsClientProps {
@@ -93,7 +105,11 @@ export function SettingsClient({
   const [newTagName, setNewTagName] = useState("")
   const [newTagCategory, setNewTagCategory] = useState<TagCategory>("ORPHAN_OPERATIONAL_STATUS" as TagCategory)
   const [newTagColor, setNewTagColor] = useState("#6366f1")
+  const [tagSearch, setTagSearch] = useState("")
   const [seedingTags, setSeedingTags] = useState(false)
+  const [editingTag, setEditingTag] = useState<any>(null)
+  const [editTagName, setEditTagName] = useState("")
+  const [editTagColor, setEditTagColor] = useState("")
 
   // Users state
   const [usersList, setUsersList] = useState<any[]>(initialUsers)
@@ -103,8 +119,12 @@ export function SettingsClient({
   const [newUserPhone, setNewUserPhone] = useState("")
   const [newUserRole, setNewUserRole] = useState<Role>("MARKETER" as Role)
   const [showNewPassword, setShowNewPassword] = useState(false)
-  const [editingUserRole, setEditingUserRole] = useState<string | null>(null)
-  const [editRoleValue, setEditRoleValue] = useState<string>("")
+  const [userSearch, setUserSearch] = useState("")
+  const [userRoleFilter, setUserRoleFilter] = useState("ALL")
+  const [editingUser, setEditingUser] = useState<any>(null)
+  const [editUserName, setEditUserName] = useState("")
+  const [editUserPhone, setEditUserPhone] = useState("")
+  const [editUserRole, setEditUserRole] = useState<Role>("MARKETER" as Role)
 
   // Geo form states
   const [govName, setGovName] = useState("")
@@ -115,6 +135,8 @@ export function SettingsClient({
   const [subDistId, setSubDistId] = useState("")
   const [geoSearch, setGeoSearch] = useState("")
   const [expandedGovs, setExpandedGovs] = useState<Set<number>>(new Set())
+  const [editingGeo, setEditingGeo] = useState<{ type: "gov" | "dist" | "sub"; id: number; name: string } | null>(null)
+  const [editGeoName, setEditGeoName] = useState("")
 
   // Profile state
   const [profileName, setProfileName] = useState(initialCurrentUser?.name || "")
@@ -132,7 +154,6 @@ export function SettingsClient({
     setMounted(true)
   }, [])
 
-  // Auto-dismiss messages after 4 seconds
   useEffect(() => {
     if (message.text) {
       const t = setTimeout(() => setMessage({ text: "", type: "" }), 4000)
@@ -161,9 +182,9 @@ export function SettingsClient({
 
   const handleCreateGov = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!govName) return
+    if (!govName.trim()) return
     setSubmitting(true)
-    const res = await createGovernorate({ nameAr: govName })
+    const res = await createGovernorate({ nameAr: govName.trim() })
     if (res.success) {
       setGovName("")
       showMsg("تمت إضافة المحافظة بنجاح! ✅", "success")
@@ -176,9 +197,9 @@ export function SettingsClient({
 
   const handleCreateDist = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!distName || !distGovId) return
+    if (!distName.trim() || !distGovId) return
     setSubmitting(true)
-    const res = await createDistrict({ nameAr: distName, governorateId: Number(distGovId) })
+    const res = await createDistrict({ nameAr: distName.trim(), governorateId: Number(distGovId) })
     if (res.success) {
       setDistName("")
       showMsg("تمت إضافة المديرية بنجاح! ✅", "success")
@@ -191,9 +212,9 @@ export function SettingsClient({
 
   const handleCreateSub = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!subName || !subDistId) return
+    if (!subName.trim() || !subDistId) return
     setSubmitting(true)
-    const res = await createSubDistrict({ nameAr: subName, districtId: Number(subDistId) })
+    const res = await createSubDistrict({ nameAr: subName.trim(), districtId: Number(subDistId) })
     if (res.success) {
       setSubName("")
       showMsg("تمت إضافة العزلة/الحي بنجاح! ✅", "success")
@@ -204,8 +225,31 @@ export function SettingsClient({
     setSubmitting(false)
   }
 
+  const handleUpdateGeo = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingGeo || !editGeoName.trim()) return
+    setSubmitting(true)
+    let res: any
+    if (editingGeo.type === "gov") {
+      res = await updateGovernorate(editingGeo.id, editGeoName.trim())
+    } else if (editingGeo.type === "dist") {
+      res = await updateDistrict(editingGeo.id, editGeoName.trim())
+    } else {
+      res = await updateSubDistrict(editingGeo.id, editGeoName.trim())
+    }
+
+    if (res.success) {
+      showMsg("تم تعديل الاسم بنجاح ✅", "success")
+      setEditingGeo(null)
+      loadData()
+    } else {
+      showMsg(res.error || "فشل التعديل", "error")
+    }
+    setSubmitting(false)
+  }
+
   const handleDeleteGov = async (id: number, name: string) => {
-    if (!confirm(`هل أنت متأكد من حذف محافظة "${name}"؟\nسيتم حذف جميع المديريات والعزل التابعة لها إن لم تكن مرتبطة بأسر.`)) return
+    if (!confirm(`هل أنت متأكد من حذف محافظة "${name}"؟\nسيتم التأكد من عدم ارتباط أي أسر بها.`)) return
     setSubmitting(true)
     const res = await deleteGovernorate(id)
     if (res.success) {
@@ -247,14 +291,14 @@ export function SettingsClient({
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newUserName || !newUserEmail || !newUserPassword) return
+    if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword) return
     setSubmitting(true)
     const res = await createSystemUser({
-      name: newUserName,
-      email: newUserEmail,
+      name: newUserName.trim(),
+      email: newUserEmail.trim(),
       password: newUserPassword,
       role: newUserRole,
-      phone: newUserPhone,
+      phone: newUserPhone.trim(),
     })
     if (res.success) {
       if (res.notifyCredentials) {
@@ -298,7 +342,7 @@ export function SettingsClient({
   }
 
   const handleDeleteUser = async (id: string, name: string) => {
-    if (!confirm(`هل أنت متأكد من حذف مستخدم "${name}" نهائياً؟ لا يمكن التراجع.`)) return
+    if (!confirm(`هل أنت متأكد من حذف مستخدم "${name}" نهائياً من النظام وSupabase؟ لا يمكن التراجع.`)) return
     setSubmitting(true)
     const res = await deleteUser(id)
     if (res.success) {
@@ -310,16 +354,45 @@ export function SettingsClient({
     setSubmitting(false)
   }
 
-  const handleUpdateRole = async (id: string) => {
-    if (!editRoleValue) return
-    const res = await updateUserRole(id, editRoleValue)
+  const handleSaveUserEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingUser || !editUserName.trim()) return
+    setSubmitting(true)
+    const res = await updateSystemUser(editingUser.id, {
+      name: editUserName.trim(),
+      phone: editUserPhone.trim(),
+      role: editUserRole,
+    })
     if (res.success) {
-      showMsg("تم تحديث الصلاحية بنجاح", "success")
-      setEditingUserRole(null)
+      showMsg("تم تحديث بيانات المستخدم بنجاح ✅", "success")
+      setEditingUser(null)
       loadData()
     } else {
       showMsg(res.error || "فشل التحديث", "error")
     }
+    setSubmitting(false)
+  }
+
+  // ─── TAG EDIT HANDLERS ────────────────────────────────────────────────────
+
+  const handleSaveTagEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingTag || !editTagName.trim()) return
+    setSubmitting(true)
+    const fd = new FormData()
+    fd.set("id", editingTag.id)
+    fd.set("nameAr", editTagName.trim())
+    fd.set("category", editingTag.category)
+    fd.set("color", editTagColor || editingTag.color)
+    const res = await updateTag(fd)
+    if (res.success) {
+      showMsg("تم تعديل التصنيف بنجاح ✅", "success")
+      setEditingTag(null)
+      loadData()
+    } else {
+      showMsg(res.error || "فشل تعديل التصنيف", "error")
+    }
+    setSubmitting(false)
   }
 
   // ─── PROFILE HANDLERS ─────────────────────────────────────────────────────
@@ -327,7 +400,7 @@ export function SettingsClient({
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
-    const res = await updateCurrentUserProfile({ name: profileName, phone: profilePhone })
+    const res = await updateCurrentUserProfile({ name: profileName.trim(), phone: profilePhone.trim() })
     if (res.success) {
       setCurrentUser(res.user)
       showMsg("تم تحديث بيانات الملف الشخصي بنجاح ✅", "success")
@@ -384,6 +457,18 @@ export function SettingsClient({
       .filter(Boolean)
   }, [geoStructure, geoSearch])
 
+  const filteredUsers = useMemo(() => {
+    return usersList.filter((u) => {
+      const matchesSearch =
+        !userSearch.trim() ||
+        u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+        u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
+        (u.phone && u.phone.includes(userSearch))
+      const matchesRole = userRoleFilter === "ALL" || u.role === userRoleFilter
+      return matchesSearch && matchesRole
+    })
+  }, [usersList, userSearch, userRoleFilter])
+
   const toggleGovExpand = (id: number) => {
     setExpandedGovs((prev) => {
       const next = new Set(prev)
@@ -410,7 +495,7 @@ export function SettingsClient({
           إعدادات النظام والإدارة العامة
         </h2>
         <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-          إدارة الملف الشخصي، إضافة وتعديل النطاقات الجغرافية، إدارة المستخدمين والتصنيفات، والتحقق من صحة النظام.
+          إدارة الملف الشخصي، النطاقات الجغرافية، المستخدمين والتصنيفات، وفحص صحة وتشخيص النظام.
         </p>
       </div>
 
@@ -431,15 +516,15 @@ export function SettingsClient({
         <TabsList className="bg-gray-100 dark:bg-slate-950 p-1 rounded-xl flex flex-wrap justify-start gap-1 border border-gray-200 dark:border-slate-800/80">
           <TabsTrigger value="geo" className="rounded-lg text-xs font-bold gap-1.5 px-3 py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white">
             <Map className="h-3.5 w-3.5 text-emerald-500" />
-            المناطق الجغرافية
+            المناطق الجغرافية ({geoStructure.length})
           </TabsTrigger>
           <TabsTrigger value="users" className="rounded-lg text-xs font-bold gap-1.5 px-3 py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white">
             <Users className="h-3.5 w-3.5 text-blue-500" />
-            المستخدمون
+            المستخدمون ({usersList.length})
           </TabsTrigger>
           <TabsTrigger value="tags" className="rounded-lg text-xs font-bold gap-1.5 px-3 py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white">
             <Tag className="h-3.5 w-3.5 text-indigo-500" />
-            التصنيفات
+            التصنيفات ({allTags.length})
           </TabsTrigger>
           <TabsTrigger value="profile" className="rounded-lg text-xs font-bold gap-1.5 px-3 py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white">
             <User className="h-3.5 w-3.5 text-gray-500 dark:text-slate-400" />
@@ -458,9 +543,9 @@ export function SettingsClient({
           {/* Quick stats bar */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { icon: MapPin, label: "محافظة", value: geoStructure.length, color: "text-emerald-600" },
-              { icon: Map, label: "مديرية", value: totalDistricts, color: "text-blue-600" },
-              { icon: MapPin, label: "عزلة/حي", value: totalSubDistricts, color: "text-purple-600" },
+              { icon: MapPin, label: "محافظة مسجلة", value: geoStructure.length, color: "text-emerald-600 dark:text-emerald-400" },
+              { icon: Map, label: "مديرية إدارية", value: totalDistricts, color: "text-blue-600 dark:text-blue-400" },
+              { icon: MapPin, label: "عزلة وحي سكني", value: totalSubDistricts, color: "text-purple-600 dark:text-purple-400" },
             ].map(({ icon: Icon, label, value, color }) => (
               <div key={label} className="bg-white dark:bg-slate-900/40 border border-gray-200 dark:border-slate-800/80 rounded-xl p-3 flex items-center gap-3">
                 <Icon className={`h-5 w-5 ${color}`} />
@@ -495,7 +580,7 @@ export function SettingsClient({
                       required
                     />
                   </div>
-                  <Button type="submit" disabled={submitting || !govName} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg h-9 font-bold text-xs">
+                  <Button type="submit" disabled={submitting || !govName.trim()} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg h-9 font-bold text-xs">
                     حفظ المحافظة
                   </Button>
                 </form>
@@ -537,7 +622,7 @@ export function SettingsClient({
                       required
                     />
                   </div>
-                  <Button type="submit" disabled={submitting || !distName || !distGovId} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg h-9 font-bold text-xs">
+                  <Button type="submit" disabled={submitting || !distName.trim() || !distGovId} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg h-9 font-bold text-xs">
                     حفظ المديرية
                   </Button>
                 </form>
@@ -596,7 +681,7 @@ export function SettingsClient({
                       required
                     />
                   </div>
-                  <Button type="submit" disabled={submitting || !subName || !subDistId} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg h-9 font-bold text-xs">
+                  <Button type="submit" disabled={submitting || !subName.trim() || !subDistId} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg h-9 font-bold text-xs">
                     حفظ الحي/العزلة
                   </Button>
                 </form>
@@ -610,32 +695,32 @@ export function SettingsClient({
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <CardTitle className="text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
                   <MapPin className="h-4.5 w-4.5 text-emerald-500" />
-                  هيكل التقسيم الجغرافي ({geoStructure.length} محافظة)
+                  الهيكل الجغرافي النشط ({geoStructure.length} محافظة)
                 </CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => setExpandedGovs(new Set(geoStructure.map((g: any) => g.id)))}
-                    className="h-7 px-2 text-[10px] font-bold text-gray-500 hover:text-gray-900"
+                    className="h-8 px-2.5 text-xs font-semibold"
                   >
                     توسيع الكل
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => setExpandedGovs(new Set())}
-                    className="h-7 px-2 text-[10px] font-bold text-gray-500 hover:text-gray-900"
+                    className="h-8 px-2.5 text-xs font-semibold"
                   >
                     طي الكل
                   </Button>
                   <div className="relative">
-                    <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                    <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                     <Input
-                      placeholder="بحث في المناطق..."
+                      placeholder="بحث بالمحافظة أو المديرية أو الحي..."
                       value={geoSearch}
                       onChange={(e) => setGeoSearch(e.target.value)}
-                      className="h-8 text-xs pr-8 pl-3 w-44 rounded-lg"
+                      className="h-8 text-xs pr-8 pl-3 w-52 rounded-lg"
                     />
                   </div>
                   <Button
@@ -658,63 +743,104 @@ export function SettingsClient({
                   {geoSearch ? "لا توجد نتائج مطابقة للبحث." : "لا توجد مناطق جغرافية مسجلة بعد."}
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {filteredGeo.map((gov: any) => {
                     const isExpanded = expandedGovs.has(gov.id)
                     return (
-                      <div key={gov.id} className="border border-gray-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                      <div key={gov.id} className="border border-gray-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
                         {/* Governorate header */}
                         <div
-                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800/50 transition-colors"
+                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-900/60 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-850 transition-colors"
                           onClick={() => toggleGovExpand(gov.id)}
                         >
                           <div className="flex items-center gap-2">
-                            {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                            {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-500" /> : <ChevronRight className="h-4 w-4 text-gray-500" />}
                             <span className="text-sm font-bold text-gray-900 dark:text-white">محافظة {gov.nameAr}</span>
-                            <Badge className="bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 text-[9px] font-bold">
+                            <Badge className="bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 text-[10px] font-bold">
                               {gov.districts?.length || 0} مديرية
                             </Badge>
                           </div>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteGov(gov.id, gov.nameAr) }}
-                            className="text-gray-300 dark:text-slate-600 hover:text-rose-500 dark:hover:text-rose-400 transition-colors p-1 rounded opacity-0 group-hover:opacity-100"
-                            title="حذف المحافظة"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingGeo({ type: "gov", id: gov.id, name: gov.nameAr })
+                                setEditGeoName(gov.nameAr)
+                              }}
+                              className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1.5 rounded hover:bg-gray-200/50 dark:hover:bg-slate-800 transition-colors"
+                              title="تعديل اسم المحافظة"
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteGov(gov.id, gov.nameAr)
+                              }}
+                              className="text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 p-1.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                              title="حذف المحافظة"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
 
-                        {/* Districts */}
+                        {/* Districts list */}
                         {isExpanded && (
-                          <div className="divide-y divide-gray-100 dark:divide-slate-800/50">
+                          <div className="divide-y divide-gray-100 dark:divide-slate-800/50 bg-white dark:bg-slate-950/40">
                             {(gov.districts || []).length === 0 ? (
-                              <div className="px-6 py-3 text-[11px] text-gray-400 italic">لا توجد مديريات بعد.</div>
+                              <div className="px-6 py-3 text-[11px] text-gray-400 italic">لا توجد مديريات مسجلة تحت هذه المحافظة.</div>
                             ) : (
                               (gov.districts || []).map((d: any) => (
-                                <div key={d.id} className="px-4 py-2">
-                                  <div className="flex items-center justify-between mb-1.5">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-xs font-semibold text-gray-700 dark:text-slate-300">مديرية: {d.nameAr}</span>
-                                      <span className="text-[9px] text-gray-400 dark:text-slate-500 bg-gray-100 dark:bg-slate-900 px-1.5 py-0.5 rounded-full border border-gray-200 dark:border-slate-800">
-                                        {d.subDistricts?.length || 0} حي/عزلة
+                                <div key={d.id} className="p-3">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-bold text-gray-800 dark:text-slate-200">مديرية: {d.nameAr}</span>
+                                      <span className="text-[9px] text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-900 px-2 py-0.5 rounded-full border border-gray-200 dark:border-slate-800 font-semibold">
+                                        {d.subDistricts?.length || 0} حي / عزلة
                                       </span>
                                     </div>
-                                    <button
-                                      onClick={() => handleDeleteDist(d.id, d.nameAr)}
-                                      className="text-gray-300 dark:text-slate-700 hover:text-rose-500 dark:hover:text-rose-400 transition-colors p-0.5 rounded"
-                                      title="حذف المديرية"
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </button>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => {
+                                          setEditingGeo({ type: "dist", id: d.id, name: d.nameAr })
+                                          setEditGeoName(d.nameAr)
+                                        }}
+                                        className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+                                        title="تعديل اسم المديرية"
+                                      >
+                                        <Edit3 className="h-3 w-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteDist(d.id, d.nameAr)}
+                                        className="text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                                        title="حذف المديرية"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </button>
+                                    </div>
                                   </div>
                                   {d.subDistricts && d.subDistricts.length > 0 && (
-                                    <div className="flex flex-wrap gap-1">
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
                                       {d.subDistricts.map((s: any) => (
-                                        <div key={s.id} className="group/sub flex items-center gap-1 bg-gray-100 dark:bg-slate-900/60 px-2 py-0.5 rounded-lg border border-gray-200 dark:border-slate-800">
-                                          <span className="text-[10px] text-gray-600 dark:text-slate-400 font-semibold">{s.nameAr}</span>
+                                        <div
+                                          key={s.id}
+                                          className="flex items-center gap-1.5 bg-gray-50 dark:bg-slate-900 px-2 py-1 rounded-lg border border-gray-200 dark:border-slate-800 text-[11px]"
+                                        >
+                                          <span className="text-gray-700 dark:text-slate-300 font-medium">{s.nameAr}</span>
+                                          <button
+                                            onClick={() => {
+                                              setEditingGeo({ type: "sub", id: s.id, name: s.nameAr })
+                                              setEditGeoName(s.nameAr)
+                                            }}
+                                            className="text-gray-400 hover:text-indigo-500 p-0.5"
+                                            title="تعديل"
+                                          >
+                                            <Edit3 className="h-2.5 w-2.5" />
+                                          </button>
                                           <button
                                             onClick={() => handleDeleteSub(s.id, s.nameAr)}
-                                            className="text-gray-300 dark:text-slate-700 hover:text-rose-500 dark:hover:text-rose-400 transition-colors opacity-0 group-hover/sub:opacity-100"
+                                            className="text-gray-400 hover:text-rose-500 p-0.5"
                                             title="حذف"
                                           >
                                             <Trash2 className="h-2.5 w-2.5" />
@@ -784,6 +910,7 @@ export function SettingsClient({
                         onChange={(e) => setNewUserPassword(e.target.value)}
                         className="h-9 text-xs rounded-lg pl-9"
                         required
+                        minLength={6}
                       />
                       <button
                         type="button"
@@ -795,7 +922,7 @@ export function SettingsClient({
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-700 dark:text-slate-300">رقم الهاتف (واتساب)</label>
+                    <label className="text-xs font-bold text-gray-700 dark:text-slate-300">رقم الهاتف (لإرسال بيانات الدخول واتساب)</label>
                     <Input
                       placeholder="770000000"
                       value={newUserPhone}
@@ -811,17 +938,17 @@ export function SettingsClient({
                       className="flex h-9 w-full rounded-lg border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/60 px-3 py-1.5 text-xs font-semibold focus-visible:outline-none text-right text-gray-800 dark:text-slate-200"
                       required
                     >
-                      <option value="MARKETER">مسوق ميداني</option>
-                      <option value="DATA_ENTRY">مدخل بيانات</option>
-                      <option value="MANAGER">مدير برامج</option>
-                      <option value="VIEWER">مطلع (قراءة فقط)</option>
-                      <option value="ADMIN">مسؤول النظام الكامل</option>
+                      <option value="MARKETER">مسوق ميداني (MARKETER)</option>
+                      <option value="DATA_ENTRY">مدخل بيانات (DATA_ENTRY)</option>
+                      <option value="MANAGER">مدير برامج (MANAGER)</option>
+                      <option value="VIEWER">مطلع قراءة فقط (VIEWER)</option>
+                      <option value="ADMIN">مسؤول النظام الكامل (ADMIN)</option>
                     </select>
                   </div>
                   <Button
                     type="submit"
-                    disabled={submitting || !newUserName || !newUserEmail || !newUserPassword}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg h-9 font-bold text-xs"
+                    disabled={submitting || !newUserName.trim() || !newUserEmail.trim() || !newUserPassword}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg h-9 font-bold text-xs shadow-sm"
                   >
                     حفظ الحساب وتزويده بالصلاحية
                   </Button>
@@ -832,28 +959,51 @@ export function SettingsClient({
             {/* Users List Table */}
             <Card className="bg-white dark:bg-slate-900/40 border border-gray-200 dark:border-slate-800/80 rounded-2xl shadow-sm lg:col-span-2">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <CardTitle className="text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
                     <Users className="h-4 w-4 text-emerald-500" />
-                    قائمة المستخدمين المسجلين ({usersList.length})
+                    المستخدمون والمسوقون المسجلون ({filteredUsers.length} من {usersList.length})
                   </CardTitle>
-                  <Button variant="ghost" size="sm" onClick={loadData} disabled={loading} className="h-8 px-2">
-                    <RefreshCw className={`h-3.5 w-3.5 text-gray-500 ${loading ? "animate-spin" : ""}`} />
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                      <Input
+                        placeholder="بحث بالاسم أو البريد..."
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        className="h-8 text-xs pr-8 pl-3 w-40 rounded-lg"
+                      />
+                    </div>
+                    <select
+                      value={userRoleFilter}
+                      onChange={(e) => setUserRoleFilter(e.target.value)}
+                      className="h-8 rounded-lg border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 px-2 text-xs font-semibold text-gray-800 dark:text-slate-200"
+                    >
+                      <option value="ALL">جميع الأدوار</option>
+                      <option value="ADMIN">مسؤول</option>
+                      <option value="MANAGER">مدير برامج</option>
+                      <option value="DATA_ENTRY">مدخل بيانات</option>
+                      <option value="MARKETER">مسوق ميداني</option>
+                      <option value="VIEWER">مطلع</option>
+                    </select>
+                    <Button variant="ghost" size="sm" onClick={loadData} disabled={loading} className="h-8 px-2">
+                      <RefreshCw className={`h-3.5 w-3.5 text-gray-500 ${loading ? "animate-spin" : ""}`} />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
                 {loading ? (
                   <div className="text-center py-8 text-xs text-gray-500">جاري التحميل...</div>
-                ) : usersList.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-gray-400 italic">لا يوجد مستخدمون مسجلون.</div>
+                ) : filteredUsers.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-gray-400 italic">لا يوجد مستخدمون مطابقون.</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-right text-xs">
                       <thead className="bg-gray-100 dark:bg-slate-950 text-gray-700 dark:text-slate-300 font-bold border-b border-gray-200 dark:border-slate-800">
                         <tr>
-                          <th className="p-3">الاسم</th>
-                          <th className="p-3">البريد</th>
+                          <th className="p-3">الاسم الكامل</th>
+                          <th className="p-3">البريد الإلكتروني</th>
                           <th className="p-3">الهاتف</th>
                           <th className="p-3 text-center">الصلاحية</th>
                           <th className="p-3 text-center">الحالة</th>
@@ -861,43 +1011,15 @@ export function SettingsClient({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50 text-gray-700 dark:text-slate-300">
-                        {usersList.map((u) => (
-                          <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-slate-900/30 transition-all group">
+                        {filteredUsers.map((u) => (
+                          <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-slate-900/30 transition-all">
                             <td className="p-3 font-bold text-gray-900 dark:text-white whitespace-nowrap">{u.name}</td>
-                            <td className="p-3 font-mono text-[10px] text-gray-500 dark:text-slate-400">{u.email}</td>
+                            <td className="p-3 font-mono text-[11px] text-gray-500 dark:text-slate-400">{u.email}</td>
                             <td className="p-3 font-mono text-[11px]">{u.phone || "—"}</td>
                             <td className="p-3 text-center">
-                              {editingUserRole === u.id ? (
-                                <div className="flex items-center gap-1 justify-center">
-                                  <select
-                                    value={editRoleValue}
-                                    onChange={(e) => setEditRoleValue(e.target.value)}
-                                    className="h-7 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-900 px-1 text-[10px] font-semibold"
-                                    autoFocus
-                                  >
-                                    <option value="MARKETER">مسوق</option>
-                                    <option value="DATA_ENTRY">مدخل</option>
-                                    <option value="MANAGER">مدير</option>
-                                    <option value="VIEWER">مطلع</option>
-                                    <option value="ADMIN">مسؤول</option>
-                                  </select>
-                                  <button onClick={() => handleUpdateRole(u.id)} className="text-emerald-600 hover:text-emerald-800 text-[10px] font-bold">حفظ</button>
-                                  <button onClick={() => setEditingUserRole(null)} className="text-gray-400 hover:text-gray-700 text-[10px]">إلغاء</button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center justify-center gap-1">
-                                  <Badge className={`border font-bold text-[9px] ${ROLE_LABELS[u.role]?.color || ""}`}>
-                                    {ROLE_LABELS[u.role]?.label || u.role}
-                                  </Badge>
-                                  <button
-                                    onClick={() => { setEditingUserRole(u.id); setEditRoleValue(u.role) }}
-                                    className="text-gray-300 dark:text-slate-700 hover:text-indigo-500 dark:hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-all"
-                                    title="تعديل الصلاحية"
-                                  >
-                                    <Edit3 className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              )}
+                              <Badge className={`border font-bold text-[9px] ${ROLE_LABELS[u.role]?.color || "bg-gray-100 text-gray-600"}`}>
+                                {ROLE_LABELS[u.role]?.label || u.role}
+                              </Badge>
                             </td>
                             <td className="p-3 text-center">
                               {u.isActive ? (
@@ -911,8 +1033,23 @@ export function SettingsClient({
                                 <Button
                                   size="sm"
                                   variant="ghost"
+                                  onClick={() => {
+                                    setEditingUser(u)
+                                    setEditUserName(u.name)
+                                    setEditUserPhone(u.phone || "")
+                                    setEditUserRole(u.role)
+                                  }}
+                                  className="h-7 px-2 text-gray-500 hover:text-indigo-600"
+                                  title="تعديل المستخدم"
+                                >
+                                  <Edit3 className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
                                   onClick={() => handleToggleUser(u.id)}
-                                  className="h-7 px-2 text-[10px] font-bold text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white"
+                                  className="h-7 px-2 text-gray-500 hover:text-emerald-600"
+                                  title={u.isActive ? "تعطيل الحساب" : "تفعيل الحساب"}
                                 >
                                   {u.isActive ? <ToggleRight className="h-4 w-4 text-emerald-500" /> : <ToggleLeft className="h-4 w-4 text-gray-400" />}
                                 </Button>
@@ -920,7 +1057,7 @@ export function SettingsClient({
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => handleDeleteUser(u.id, u.name)}
-                                  className="h-7 px-2 text-gray-300 dark:text-slate-700 hover:text-rose-500 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all"
+                                  className="h-7 px-2 text-gray-400 hover:text-rose-600"
                                   title="حذف المستخدم"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -945,22 +1082,24 @@ export function SettingsClient({
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-extrabold text-gray-900 dark:text-white">إدارة التصنيفات المرنة</h3>
-              <p className="text-xs text-gray-500 dark:text-white/50 mt-1">أضف وعدّل التصنيفات التي تظهر على الأيتام والأسر. التغييرات تنعكس فوراً.</p>
+              <p className="text-xs text-gray-500 dark:text-white/50 mt-1">إضافة وتعديل التصنيفات المستخدمة لفرز ملفات الأيتام والأسر.</p>
             </div>
-            <Button
-              onClick={async () => {
-                setSeedingTags(true)
-                const res = await seedInitialTags()
-                showMsg(res.message || res.error || "", res.success ? "success" : "error")
-                await loadData()
-                setSeedingTags(false)
-              }}
-              disabled={seedingTags}
-              className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              {seedingTags ? "جاري الإضافة..." : "إضافة التصنيفات الافتراضية"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={async () => {
+                  setSeedingTags(true)
+                  const res = await seedInitialTags()
+                  showMsg(res.message || res.error || "", res.success ? "success" : "error")
+                  await loadData()
+                  setSeedingTags(false)
+                }}
+                disabled={seedingTags}
+                className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {seedingTags ? "جاري الإضافة..." : "إضافة التصنيفات الافتراضية"}
+              </Button>
+            </div>
           </div>
 
           {/* Add New Tag Form */}
@@ -975,10 +1114,10 @@ export function SettingsClient({
               <form
                 onSubmit={async (e) => {
                   e.preventDefault()
-                  if (!newTagName) return
+                  if (!newTagName.trim()) return
                   setSubmitting(true)
                   const fd = new FormData()
-                  fd.set("nameAr", newTagName)
+                  fd.set("nameAr", newTagName.trim())
                   fd.set("category", newTagCategory)
                   fd.set("color", newTagColor)
                   const res = await createTag(fd)
@@ -998,7 +1137,7 @@ export function SettingsClient({
                   <Input
                     value={newTagName}
                     onChange={(e) => setNewTagName(e.target.value)}
-                    placeholder="مثال: تحت المتابعة"
+                    placeholder="مثال: تحت المتابعة، مستعجل..."
                     className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white text-sm h-9"
                   />
                 </div>
@@ -1010,7 +1149,7 @@ export function SettingsClient({
                     className="w-full h-9 rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-gray-900 dark:text-white"
                   >
                     <option value="ORPHAN_OPERATIONAL_STATUS">الحالة التشغيلية للأيتام</option>
-                    <option value="FUNDING_SOURCE">جهة التمويل</option>
+                    <option value="FUNDING_SOURCE">جهة التمويل والكفالة</option>
                     <option value="FAMILY_NEED">احتياجات الأسرة</option>
                     <option value="MEDICAL_CONDITION">الحالة الطبية</option>
                     <option value="CUSTOM">مخصص</option>
@@ -1025,7 +1164,7 @@ export function SettingsClient({
                       onChange={(e) => setNewTagColor(e.target.value)}
                       className="h-9 w-12 rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
                     />
-                    <Button type="submit" disabled={submitting} className="flex-1 h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white">
+                    <Button type="submit" disabled={submitting || !newTagName.trim()} className="flex-1 h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
                       <Plus className="h-3 w-3 ml-1" /> إضافة
                     </Button>
                   </div>
@@ -1056,7 +1195,7 @@ export function SettingsClient({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {catTags.map((tag) => (
                       <div
                         key={tag.id}
@@ -1070,25 +1209,36 @@ export function SettingsClient({
                           <div className="h-3.5 w-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">{tag.nameAr}</span>
                           {!tag.isActive && (
-                            <span className="text-[10px] bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full">معطّل</span>
+                            <span className="text-[10px] bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-bold">معطّل</span>
                           )}
-                          <span className="text-[10px] text-gray-400 dark:text-white/30">
+                          <span className="text-[10px] text-gray-400 dark:text-white/30 font-semibold">
                             {tag._count.beneficiaryTags + tag._count.familyTags} استخدام
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              setEditingTag(tag)
+                              setEditTagName(tag.nameAr)
+                              setEditTagColor(tag.color)
+                            }}
+                            className="text-gray-400 hover:text-indigo-600 p-1 rounded"
+                            title="تعديل التصنيف"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
                           <button
                             onClick={async () => {
                               const res = await toggleTag(tag.id)
                               showMsg(res.message || res.error || "", res.success ? "success" : "error")
                               await loadData()
                             }}
-                            className="text-gray-400 dark:text-white/40 hover:text-gray-700 dark:hover:text-white transition-colors p-1 rounded"
+                            className="text-gray-400 hover:text-gray-700 p-1 rounded"
                             title={tag.isActive ? "تعطيل" : "تفعيل"}
                           >
                             {tag.isActive
-                              ? <ToggleRight className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
-                              : <ToggleLeft className="h-5 w-5 text-gray-400 dark:text-slate-500" />}
+                              ? <ToggleRight className="h-5 w-5 text-emerald-500" />
+                              : <ToggleLeft className="h-5 w-5 text-gray-400" />}
                           </button>
                           <button
                             onClick={async () => {
@@ -1097,7 +1247,7 @@ export function SettingsClient({
                               showMsg(res.message || res.error || "", res.success ? "success" : "error")
                               await loadData()
                             }}
-                            className="text-gray-300 dark:text-white/20 hover:text-rose-600 dark:hover:text-red-400 transition-colors p-1 rounded"
+                            className="text-gray-300 hover:text-rose-600 p-1 rounded"
                             title="حذف"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1125,13 +1275,13 @@ export function SettingsClient({
                   بيانات الحساب الشخصي
                 </CardTitle>
                 <CardDescription className="text-[11px] text-gray-500 dark:text-slate-400">
-                  تعديل الاسم ورقم الهاتف الخاصين بك.
+                  تعديل الاسم ورقم الهاتف الخاصين بحسابك.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
                 {/* Avatar section */}
                 <div className="flex items-center gap-4 border-b border-gray-100 dark:border-slate-800 pb-4">
-                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white text-2xl font-bold shadow-md">
                     {(currentUser?.name || "م").charAt(0)}
                   </div>
                   <div className="space-y-1.5">
@@ -1234,7 +1384,7 @@ export function SettingsClient({
                     )}
                   </div>
                   <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-2.5 text-[11px] text-amber-700 dark:text-amber-400">
-                    ⚠️ بعد تغيير كلمة المرور سيطلب منك تسجيل الدخول مجدداً.
+                    ⚠️ سيتم تطبيق كلمة المرور الجديدة فوراً عبر Supabase Auth.
                   </div>
                   <Button
                     type="submit"
@@ -1268,7 +1418,7 @@ export function SettingsClient({
                   </Button>
                 </div>
                 <CardDescription className="text-[11px] text-gray-500 dark:text-slate-400">
-                  ملخص إحصائيات الجداول المخزنة في Supabase PostgreSQL.
+                  ملخص إحصائيات الجداول المسجلة في نظام قاعدة البيانات Supabase PostgreSQL.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1280,11 +1430,11 @@ export function SettingsClient({
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {[
                       { icon: Users, label: "المستخدمون", value: stats.users, color: "text-blue-500" },
-                      { icon: Heart, label: "الأسر", value: stats.families, color: "text-rose-500" },
-                      { icon: Heart, label: "الأيتام/الطلاب", value: stats.orphans, color: "text-pink-500" },
-                      { icon: Briefcase, label: "المشاريع", value: stats.projects, color: "text-indigo-500" },
-                      { icon: Coins, label: "الكفالات", value: stats.sponsorships, color: "text-amber-500" },
-                      { icon: FileText, label: "سندات القبض", value: stats.receipts, color: "text-emerald-500" },
+                      { icon: Heart, label: "الأسر المسجلة", value: stats.families, color: "text-rose-500" },
+                      { icon: Heart, label: "الأيتام والطلاب", value: stats.orphans, color: "text-pink-500" },
+                      { icon: Briefcase, label: "المشاريع الإغاثية", value: stats.projects, color: "text-indigo-500" },
+                      { icon: Coins, label: "الكفالات النشطة", value: stats.sponsorships, color: "text-amber-500" },
+                      { icon: FileText, label: "سندات القبض المالي", value: stats.receipts, color: "text-emerald-500" },
                       { icon: Activity, label: "سجلات التدقيق", value: stats.auditLogs, color: "text-purple-500" },
                       { icon: MapPin, label: "المحافظات", value: stats.govs, color: "text-teal-500" },
                       { icon: Map, label: "المديريات", value: stats.dists, color: "text-cyan-500" },
@@ -1342,6 +1492,143 @@ export function SettingsClient({
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* ── EDIT GEO DIALOG ── */}
+      {editingGeo && (
+        <Dialog open={!!editingGeo} onOpenChange={(open) => !open && setEditingGeo(null)}>
+          <DialogContent className="max-w-md text-right" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-extrabold flex items-center gap-2">
+                <Edit3 className="h-4 w-4 text-emerald-500" />
+                تعديل اسم{" "}
+                {editingGeo.type === "gov" ? "المحافظة" : editingGeo.type === "dist" ? "المديرية" : "الحي / العزلة"}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleUpdateGeo} className="space-y-4 pt-2">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-slate-300">الاسم بالعربية</label>
+                <Input
+                  value={editGeoName}
+                  onChange={(e) => setEditGeoName(e.target.value)}
+                  className="h-9 text-xs"
+                  required
+                  autoFocus
+                />
+              </div>
+              <DialogFooter className="flex gap-2 sm:justify-start">
+                <Button type="submit" disabled={submitting || !editGeoName.trim()} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">
+                  حفظ التعديل
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setEditingGeo(null)} className="text-xs">
+                  إلغاء
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ── EDIT USER DIALOG ── */}
+      {editingUser && (
+        <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+          <DialogContent className="max-w-md text-right" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-extrabold flex items-center gap-2">
+                <Edit3 className="h-4 w-4 text-emerald-500" />
+                تعديل بيانات المستخدم: {editingUser.name}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSaveUserEdit} className="space-y-3 pt-2">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-slate-300">الاسم الكامل</label>
+                <Input
+                  value={editUserName}
+                  onChange={(e) => setEditUserName(e.target.value)}
+                  className="h-9 text-xs"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-slate-300">رقم الهاتف</label>
+                <Input
+                  value={editUserPhone}
+                  onChange={(e) => setEditUserPhone(e.target.value)}
+                  placeholder="770000000"
+                  className="h-9 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-slate-300">الصلاحية / الدور</label>
+                <select
+                  value={editUserRole}
+                  onChange={(e) => setEditUserRole(e.target.value as Role)}
+                  className="flex h-9 w-full rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold focus-visible:outline-none text-right"
+                  required
+                >
+                  <option value="MARKETER">مسوق ميداني (MARKETER)</option>
+                  <option value="DATA_ENTRY">مدخل بيانات (DATA_ENTRY)</option>
+                  <option value="MANAGER">مدير برامج (MANAGER)</option>
+                  <option value="VIEWER">مطلع قراءة فقط (VIEWER)</option>
+                  <option value="ADMIN">مسؤول النظام الكامل (ADMIN)</option>
+                </select>
+              </div>
+              <DialogFooter className="flex gap-2 sm:justify-start pt-2">
+                <Button type="submit" disabled={submitting || !editUserName.trim()} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">
+                  حفظ التعديلات
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setEditingUser(null)} className="text-xs">
+                  إلغاء
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ── EDIT TAG DIALOG ── */}
+      {editingTag && (
+        <Dialog open={!!editingTag} onOpenChange={(open) => !open && setEditingTag(null)}>
+          <DialogContent className="max-w-md text-right" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-extrabold flex items-center gap-2">
+                <Edit3 className="h-4 w-4 text-indigo-500" />
+                تعديل التصنيف: {editingTag.nameAr}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSaveTagEdit} className="space-y-3 pt-2">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-slate-300">اسم التصنيف</label>
+                <Input
+                  value={editTagName}
+                  onChange={(e) => setEditTagName(e.target.value)}
+                  className="h-9 text-xs"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-700 dark:text-slate-300">اللون</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="color"
+                    value={editTagColor}
+                    onChange={(e) => setEditTagColor(e.target.value)}
+                    className="h-9 w-12 rounded-md border border-gray-200 dark:border-slate-700 cursor-pointer"
+                  />
+                  <span className="text-xs font-mono">{editTagColor}</span>
+                </div>
+              </div>
+              <DialogFooter className="flex gap-2 sm:justify-start pt-2">
+                <Button type="submit" disabled={submitting || !editTagName.trim()} className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">
+                  حفظ التعديل
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setEditingTag(null)} className="text-xs">
+                  إلغاء
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

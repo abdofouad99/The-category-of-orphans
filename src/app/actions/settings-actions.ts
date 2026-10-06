@@ -454,3 +454,75 @@ export async function changeCurrentUserPassword(newPassword: string) {
     return { success: false, error: error.message }
   }
 }
+
+export async function updateGovernorate(id: number, nameAr: string) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser || currentUser.role === "VIEWER" || currentUser.role === "MARKETER") {
+      return { success: false, error: "لا تملك صلاحية تعديل المناطق الجغرافية." }
+    }
+    const updated = await prisma.governorate.update({
+      where: { id },
+      data: { nameAr }
+    })
+    revalidatePath("/dashboard/settings")
+    return { success: true, governorate: updated }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function updateDistrict(id: number, nameAr: string) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser || currentUser.role === "VIEWER" || currentUser.role === "MARKETER") {
+      return { success: false, error: "لا تملك صلاحية تعديل المناطق الجغرافية." }
+    }
+    const updated = await prisma.district.update({
+      where: { id },
+      data: { nameAr }
+    })
+    revalidatePath("/dashboard/settings")
+    return { success: true, district: updated }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function updateSubDistrict(id: number, nameAr: string) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser || currentUser.role === "VIEWER" || currentUser.role === "MARKETER") {
+      return { success: false, error: "لا تملك صلاحية تعديل المناطق الجغرافية." }
+    }
+    const updated = await prisma.subDistrict.update({
+      where: { id },
+      data: { nameAr }
+    })
+    revalidatePath("/dashboard/settings")
+    return { success: true, subDistrict: updated }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function updateSystemUser(id: string, data: { name: string; phone?: string; role: any }) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser || currentUser.role !== "ADMIN") {
+      return { success: false, error: "هذا الإجراء يتطلب صلاحية مسؤول النظام." }
+    }
+    const updated = await prisma.user.update({
+      where: { id },
+      data: {
+        name: data.name,
+        phone: data.phone || null,
+        role: data.role,
+      }
+    })
+    revalidatePath("/dashboard/settings")
+    return { success: true, user: updated }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
