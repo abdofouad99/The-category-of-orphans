@@ -304,3 +304,153 @@ export async function toggleUserStatus(id: string) {
     return { success: false, error: error.message }
   }
 }
+
+export async function deleteUser(id: string) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser || currentUser.role !== "ADMIN") {
+      return { success: false, error: "هذا الإجراء يتطلب صلاحية مسؤول النظام." }
+    }
+    if (currentUser.id === id) {
+      return { success: false, error: "لا يمكنك حذف حسابك الخاص." }
+    }
+
+    // Delete from Supabase Auth first
+    const { createSupabaseAdminClient } = require("@/lib/supabase")
+    const supabaseAdmin = createSupabaseAdminClient()
+    await supabaseAdmin.auth.admin.deleteUser(id)
+
+    // Delete from Prisma
+    await prisma.user.delete({ where: { id } })
+
+    revalidatePath("/dashboard/settings")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function updateUserRole(id: string, role: string) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser || currentUser.role !== "ADMIN") {
+      return { success: false, error: "هذا الإجراء يتطلب صلاحية مسؤول النظام." }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { role: role as any }
+    })
+
+    revalidatePath("/dashboard/settings")
+    return { success: true, user: updated }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function deleteGovernorate(id: number) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser || currentUser.role === "VIEWER" || currentUser.role === "MARKETER") {
+      return { success: false, error: "لا تملك صلاحية حذف المناطق الجغرافية." }
+    }
+
+    // Check if it has families linked
+    const familyCount = await prisma.family.count({
+      where: {
+        subDistrict: {
+          district: {
+            governorateId: id
+          }
+        },
+        deletedAt: null
+      }
+    })
+    if (familyCount > 0) {
+      return { success: false, error: `لا يمكن الحذف — توجد ${familyCount} أسرة مرتبطة بهذه المحافظة.` }
+    }
+
+    await prisma.governorate.delete({ where: { id } })
+    revalidatePath("/dashboard/settings")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function deleteDistrict(id: number) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser || currentUser.role === "VIEWER" || currentUser.role === "MARKETER") {
+      return { success: false, error: "لا تملك صلاحية حذف المناطق الجغرافية." }
+    }
+
+    const familyCount = await prisma.family.count({
+      where: {
+        subDistrict: {
+          districtId: id
+        },
+        deletedAt: null
+      }
+    })
+    if (familyCount > 0) {
+      return { success: false, error: `لا يمكن الحذف — توجد ${familyCount} أسرة مرتبطة بهذه المديرية.` }
+    }
+
+    await prisma.district.delete({ where: { id } })
+    revalidatePath("/dashboard/settings")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function deleteSubDistrict(id: number) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser || currentUser.role === "VIEWER" || currentUser.role === "MARKETER") {
+      return { success: false, error: "لا تملك صلاحية حذف المناطق الجغرافية." }
+    }
+
+    const familyCount = await prisma.family.count({ where: { subDistrictId: id, deletedAt: null } })
+    if (familyCount > 0) {
+      return { success: false, error: `لا يمكن الحذف — توجد ${familyCount} أسرة مرتبطة بهذا الحي/العزلة.` }
+    }
+
+    await prisma.subDistrict.delete({ where: { id } })
+    revalidatePath("/dashboard/settings")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function updateCurrentUserProfile(data: { name: string; phone?: string }) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return { success: false, error: "غير مسجّل الدخول." }
+
+    const updated = await prisma.user.update({
+      where: { id: currentUser.id },
+      data: { name: data.name, phone: data.phone || null }
+    })
+
+    revalidatePath("/dashboard/settings")
+    return { success: true, user: updated }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function changeCurrentUserPassword(newPassword: string) {
+  try {
+    const { createSupabaseServerClient } = require("@/lib/supabase")
+    const supabase = await createSupabaseServerClient()
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) return { success: false, error: error.message }
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}

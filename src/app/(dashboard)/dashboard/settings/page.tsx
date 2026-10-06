@@ -2,14 +2,16 @@ export const dynamic = 'force-dynamic'
 
 import { getGeoStructure, getSystemStats, getUsersList } from "@/app/actions/settings-actions"
 import { getAllTagsAdmin } from "@/app/actions/tag-actions"
+import { getCurrentUser } from "@/app/actions/auth-actions"
 import { SettingsClient } from "./settings-client"
 
 export default async function SettingsPage() {
-  const [geoRes, statsRes, tagsRes, usersRes] = await Promise.all([
+  const [geoRes, statsRes, tagsRes, usersRes, currentUser] = await Promise.all([
     getGeoStructure(),
     getSystemStats(),
     getAllTagsAdmin(),
     getUsersList(),
+    getCurrentUser(),
   ])
 
   const initialGeoStructure = geoRes.success ? (geoRes.governorates || []) : []
@@ -19,10 +21,11 @@ export default async function SettingsPage() {
 
   return (
     <SettingsClient
-      initialGeoStructure={initialGeoStructure}
-      initialStats={initialStats}
-      initialTags={initialTags}
-      initialUsers={initialUsers}
+      initialGeoStructure={JSON.parse(JSON.stringify(initialGeoStructure))}
+      initialStats={JSON.parse(JSON.stringify(initialStats))}
+      initialTags={JSON.parse(JSON.stringify(initialTags))}
+      initialUsers={JSON.parse(JSON.stringify(initialUsers))}
+      currentUser={currentUser ? JSON.parse(JSON.stringify(currentUser)) : null}
     />
   )
 }
