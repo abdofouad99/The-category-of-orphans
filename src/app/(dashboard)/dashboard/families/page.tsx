@@ -76,10 +76,10 @@ export default async function FamiliesPage() {
 
   // Stats Calculations
   const totalCount = families.length
-  const activeCount = families.filter((f) => f.isActive).length
-  const severePovertyCount = families.filter((f) => f.povertyLevel === "SEVERE").length
+  const activeCount = families.filter((f: any) => f.isActive).length
+  const severePovertyCount = families.filter((f: any) => f.povertyLevel === "SEVERE").length
   
-  const totalVulnerability = families.reduce((acc, f) => acc + (f.vulnerabilityScore || 0), 0)
+  const totalVulnerability = families.reduce((acc: number, f: any) => acc + (f.vulnerabilityScore || 0), 0)
   const avgVulnerability = totalCount > 0 ? Math.round(totalVulnerability / totalCount) : 0
 
   return (
