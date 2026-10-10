@@ -66,10 +66,13 @@ async function getGeography() {
 
 export default async function FamiliesPage() {
   const currentUser = await getCurrentUser()
-  const [families, geography] = await Promise.all([
+  const [familiesRaw, geographyRaw] = await Promise.all([
     getFamilies(),
     getGeography(),
   ])
+
+  const families = JSON.parse(JSON.stringify(familiesRaw))
+  const geography = JSON.parse(JSON.stringify(geographyRaw))
 
   // Stats Calculations
   const totalCount = families.length

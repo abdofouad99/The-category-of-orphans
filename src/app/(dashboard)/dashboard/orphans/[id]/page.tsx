@@ -44,9 +44,11 @@ export default async function OrphanDetailsPage({ params }: PageProps) {
     notFound()
   }
 
+  const serializedOrphan = JSON.parse(JSON.stringify(orphan))
+
   return (
     <div className="py-2">
-      <OrphanDetailsClient initialOrphan={orphan as any} currentUserRole={currentUser?.role} />
+      <OrphanDetailsClient initialOrphan={serializedOrphan as any} currentUserRole={currentUser?.role} />
     </div>
   )
 }

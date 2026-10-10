@@ -61,7 +61,9 @@ async function getGeography() {
 
 export default async function PatientsPage() {
   const currentUser = await getCurrentUser()
-  const [patients, geography] = await Promise.all([getPatients(), getGeography()])
+  const [patientsRaw, geographyRaw] = await Promise.all([getPatients(), getGeography()])
+  const patients = JSON.parse(JSON.stringify(patientsRaw))
+  const geography = JSON.parse(JSON.stringify(geographyRaw))
 
   return (
     <div className="space-y-6">

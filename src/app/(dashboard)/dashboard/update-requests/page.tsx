@@ -36,6 +36,8 @@ export default async function UpdateRequestsPage() {
 
   const pendingCount = requests.filter(r => r.status === "PENDING").length
 
+  const serializedRequests = JSON.parse(JSON.stringify(requests))
+
   return (
     <div className="space-y-6 text-right" dir="rtl">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
@@ -55,7 +57,7 @@ export default async function UpdateRequestsPage() {
         </div>
       </div>
 
-      <UpdateRequestsClient requests={requests as any} reviewerId={user.id} />
+      <UpdateRequestsClient requests={serializedRequests as any} reviewerId={user.id} />
     </div>
   )
 }

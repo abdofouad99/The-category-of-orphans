@@ -66,7 +66,8 @@ export default async function OrphansPage() {
   const currentUser = await getCurrentUser()
   const isMarketer = currentUser?.role === "MARKETER"
 
-  const orphans = await getOrphans()
+  const orphansRaw = await getOrphans()
+  const orphans = JSON.parse(JSON.stringify(orphansRaw))
   const families = await getFamilies()
   const tagsResult = await getAllTags()
   const allTags = tagsResult.success ? tagsResult.tags || [] : []
@@ -108,7 +109,7 @@ export default async function OrphansPage() {
               <div>
                 <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">الأيتام الذكور</p>
                 <p className="mt-2 text-2xl font-extrabold text-[#1C355E] dark:text-white tabular-nums">
-                  {orphans.filter(o => o.gender === "MALE").length.toLocaleString("ar-SA-u-nu-latn")}
+                  {orphans.filter((o: any) => o.gender === "MALE").length.toLocaleString("ar-SA-u-nu-latn")}
                 </p>
               </div>
               <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400">
@@ -124,7 +125,7 @@ export default async function OrphansPage() {
               <div>
                 <p className="text-sm font-bold text-rose-600 dark:text-rose-400">الأيتام الإناث</p>
                 <p className="mt-2 text-2xl font-extrabold text-[#1C355E] dark:text-white tabular-nums">
-                  {orphans.filter(o => o.gender === "FEMALE").length.toLocaleString("ar-SA-u-nu-latn")}
+                  {orphans.filter((o: any) => o.gender === "FEMALE").length.toLocaleString("ar-SA-u-nu-latn")}
                 </p>
               </div>
               <div className="rounded-xl bg-rose-500/10 p-2.5 text-rose-600 dark:text-rose-400">
