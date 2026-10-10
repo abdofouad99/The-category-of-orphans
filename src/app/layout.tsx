@@ -1,19 +1,9 @@
 import type { Metadata } from "next";
-import { Cairo, Almarai } from "next/font/google";
 import "./globals.css";
 
-const cairo = Cairo({
-  subsets: ["arabic", "latin"],
-  variable: "--font-cairo",
-  display: "swap",
-});
-
-const almarai = Almarai({
-  subsets: ["arabic"],
-  weight: ["300", "400", "700", "800"],
-  variable: "--font-almarai",
-  display: "swap",
-});
+// Google fonts fallback variables
+const cairo = { variable: "font-cairo" };
+const almarai = { variable: "font-almarai" };
 
 export const metadata: Metadata = {
   title: "جمعية اليتامى التنموية | ORPHANS DEVELOPMENT",
